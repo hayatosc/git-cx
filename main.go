@@ -24,6 +24,8 @@ func main() {
 		RunE:  runCommit,
 	}
 
+	root.PersistentFlags().String("config", "", "path to TOML config file")
+
 	root.AddCommand(newConfigCmd())
 	root.AddCommand(newVersionCmd())
 
@@ -32,8 +34,13 @@ func main() {
 	}
 }
 
-func runCommit(_ *cobra.Command, _ []string) error {
+func runCommit(cmd *cobra.Command, _ []string) error {
 	cfg := config.Load()
+	if path, _ := cmd.Flags().GetString("config"); path != "" {
+		if err := config.ApplyTOML(cfg, path); err != nil {
+			return fmt.Errorf("failed to load config file: %w", err)
+		}
+	}
 
 	diff, err := git.StagedDiff()
 	if err != nil {
@@ -83,8 +90,13 @@ Example:
   git config --global cx.candidates 3
   git config --global cx.timeout 30
 `,
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg := config.Load()
+			if path, _ := cmd.Flags().GetString("config"); path != "" {
+				if err := config.ApplyTOML(cfg, path); err != nil {
+					return fmt.Errorf("failed to load config file: %w", err)
+				}
+			}
 			fmt.Printf("provider:                  %s\n", cfg.Provider)
 			fmt.Printf("model:                     %s\n", cfg.Model)
 			fmt.Printf("candidates:                %d\n", cfg.Candidates)
