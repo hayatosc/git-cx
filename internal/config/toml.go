@@ -30,8 +30,12 @@ func ApplyTOML(cfg *Config, path string) error {
 		return fmt.Errorf("read config file: %w", err)
 	}
 	var tc tomlConfig
-	if _, err := toml.Decode(string(data), &tc); err != nil {
+	meta, err := toml.Decode(string(data), &tc)
+	if err != nil {
 		return fmt.Errorf("parse config file: %w", err)
+	}
+	if undecoded := meta.Undecoded(); len(undecoded) > 0 {
+		return fmt.Errorf("parse config file: unknown keys: %v", undecoded)
 	}
 	if tc.Provider != nil {
 		cfg.Provider = *tc.Provider
