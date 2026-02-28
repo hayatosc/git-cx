@@ -27,7 +27,7 @@ func main() {
 		RunE:  runCommit,
 	}
 
-	root.PersistentFlags().String("config", "", "path to TOML config file")
+	root.PersistentFlags().String("config", "", "path to gitconfig-format config file")
 	root.PersistentFlags().String("provider", "", "AI provider (gemini, copilot, claude, codex, api, custom)")
 	root.PersistentFlags().String("model", "", "model name passed to the provider")
 	root.PersistentFlags().Int("candidates", 0, "number of commit message candidates")

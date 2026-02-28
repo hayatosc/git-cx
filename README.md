@@ -35,7 +35,7 @@ $ ./output/git-cx
 
 ## Configuration
 
-Configure via `git config` or TOML. All options can be overridden by flags per invocation. The API key is read only from `OPENAI_API_KEY`.
+Configure via `git config` or a gitconfig-format file (`--config`). All options can be overridden by flags per invocation. The API key is read only from `OPENAI_API_KEY`.
 
 ### git config
 
@@ -79,14 +79,14 @@ $ OPENAI_API_KEY=YOUR_API_KEY git cx
   apiBaseUrl = https://api.openai.com/v1
 ```
 
-### TOML
+### Config file (`--config`)
 
 ``` console
-$ git cx --config examples/gemini.toml
-$ git cx --config examples/copilot.toml
-$ git cx --config examples/claude.toml
-$ git cx --config examples/codex.toml
-$ git cx --config examples/api.toml
+$ git cx --config examples/gemini.gitconfig
+$ git cx --config examples/copilot.gitconfig
+$ git cx --config examples/claude.gitconfig
+$ git cx --config examples/codex.gitconfig
+$ git cx --config examples/api.gitconfig
 ```
 
 ### Flags
@@ -101,18 +101,18 @@ $ OPENAI_API_KEY=YOUR_API_KEY git cx --provider api --model gpt-5 --api-base-url
 
 ### Configuration mapping
 
-| Setting | git config | .gitconfig | TOML | Flag | Notes |
-| --- | --- | --- | --- | --- | --- |
-| provider | `cx.provider` | `[cx] provider` | `provider` | `--provider` | `gemini`, `copilot`, `claude`, `codex`, `api`, `custom` |
-| model | `cx.model` | `[cx] model` | `model` | `--model` | required for `api` |
-| candidates | `cx.candidates` | `[cx] candidates` | `candidates` | `--candidates` | number of suggestions |
-| timeout | `cx.timeout` | `[cx] timeout` | `timeout` | `--timeout` | seconds |
-| command | `cx.command` | `[cx] command` | `command` | `--command` | custom provider only |
-| apiBaseUrl | `cx.apiBaseUrl` | `[cx] apiBaseUrl` | `api_base_url` | `--api-base-url` | OpenAI-compatible base URL |
-| apiKey | (not supported) | (not supported) | (not supported) | (deprecated) `--api-key` | use `OPENAI_API_KEY` |
-| commit.useEmoji | `cx.commit.useEmoji` | `[cx "commit"] useEmoji` | `[commit] use_emoji` | `--use-emoji` | adds emoji prefix |
-| commit.maxSubjectLength | `cx.commit.maxSubjectLength` | `[cx "commit"] maxSubjectLength` | `[commit] max_subject_length` | `--max-subject-length` | 0 disables limit |
-| commit.scopes | `cx.commit.scopes` | `[cx "commit"] scopes` | `[commit] scopes` | (none) | repeatable in git config |
+| Setting | git config | gitconfig file | Flag | Notes |
+| --- | --- | --- | --- | --- |
+| provider | `cx.provider` | `[cx] provider` | `--provider` | `gemini`, `copilot`, `claude`, `codex`, `api`, `custom` |
+| model | `cx.model` | `[cx] model` | `--model` | required for `api` |
+| candidates | `cx.candidates` | `[cx] candidates` | `--candidates` | number of suggestions |
+| timeout | `cx.timeout` | `[cx] timeout` | `--timeout` | seconds |
+| command | `cx.command` | `[cx] command` | `--command` | custom provider only |
+| apiBaseUrl | `cx.apiBaseUrl` | `[cx] apiBaseUrl` | `--api-base-url` | OpenAI-compatible base URL |
+| apiKey | (not supported) | (not supported) | (deprecated) `--api-key` | use `OPENAI_API_KEY` |
+| commit.useEmoji | `cx.commit.useEmoji` | `[cx "commit"] useEmoji` | `--use-emoji` | adds emoji prefix |
+| commit.maxSubjectLength | `cx.commit.maxSubjectLength` | `[cx "commit"] maxSubjectLength` | `--max-subject-length` | 0 disables limit |
+| commit.scopes | `cx.commit.scopes` | `[cx "commit"] scopes` | (none) | repeatable in git config |
 
 Legacy keys for API base URL are still accepted (`cx.api.baseUrl`, `[api] base_url`). API keys in config are ignored.
 
@@ -129,6 +129,13 @@ Select the provider with `cx.provider`.
 
 For the `api` provider, set `cx.apiBaseUrl` to your OpenAI-compatible endpoint (e.g. `https://api.openai.com/v1`, `https://openrouter.ai/api/v1`, `http://localhost:8000/v1`) and set `OPENAI_API_KEY`.
 
+## Commit type
+
+Type selection includes `auto` to let AI decide the Conventional Commit header. When `auto` is selected, manual input expects a full Conventional header (e.g. `feat(core): add feature`).
+
+## Commit details
+
+After selecting a subject, you can choose to generate the body/footer with AI or enter them manually. The body input can be skipped by pressing Enter on an empty textarea.
 ## Development
 
 ``` console

@@ -45,11 +45,11 @@ func Load(ctx context.Context, runner git.Runner) (*Config, error) {
 }
 
 // LoadWithFile reads config from git config and, if path is non-empty,
-// merges the TOML file at that path on top.
+// merges the gitconfig-format file at that path on top.
 func LoadWithFile(ctx context.Context, runner git.Runner, path string) (*Config, error) {
 	cfg := loadBase(ctx, runner)
 	if path != "" {
-		if err := ApplyTOML(cfg, path); err != nil {
+		if err := ApplyGitConfigFile(ctx, runner, cfg, path); err != nil {
 			return nil, fmt.Errorf("failed to load config file %q: %w", path, err)
 		}
 	}
@@ -92,7 +92,9 @@ func loadBase(ctx context.Context, runner git.Runner) *Config {
 
 	// Commit formatting
 	if v := runner.ConfigGet(ctx, "cx.commit.useEmoji"); v != "" {
-		cfg.Commit.UseEmoji = strings.ToLower(v) == "true"
+		if b, ok := parseGitBool(v); ok {
+			cfg.Commit.UseEmoji = b
+		}
 	}
 	if v := runner.ConfigGet(ctx, "cx.commit.maxSubjectLength"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
@@ -148,4 +150,19 @@ func validateBaseURL(raw string) error {
 		return fmt.Errorf("base URL must include scheme and host")
 	}
 	return nil
+}
+
+func parseGitBool(value string) (bool, bool) {
+	trimmed := strings.TrimSpace(value)
+	switch strings.ToLower(trimmed) {
+	case "yes", "on":
+		return true, true
+	case "no", "off":
+		return false, true
+	}
+	b, err := strconv.ParseBool(trimmed)
+	if err != nil {
+		return false, false
+	}
+	return b, true
 }

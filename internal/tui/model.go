@@ -23,6 +23,8 @@ const (
 	stateAILoading
 	stateSelectMsg
 	stateInputMsg
+	stateSelectDetailMode
+	stateDetailAILoading
 	stateInputBody
 	stateInputFooter
 	stateConfirm
@@ -44,6 +46,13 @@ type aiResultMsg struct {
 	err        error
 }
 
+// aiDetailResultMsg carries AI detail generation result.
+type aiDetailResultMsg struct {
+	body   string
+	footer string
+	err    error
+}
+
 // commitDoneMsg signals that git commit completed.
 type commitDoneMsg struct{ err error }
 
@@ -54,11 +63,12 @@ type Model struct {
 	diff    string
 	stat    string
 
-	typeList list.Model
-	msgList  list.Model
-	input    textinput.Model
-	body     textarea.Model
-	spin     spinner.Model
+	typeList   list.Model
+	msgList    list.Model
+	detailList list.Model
+	input      textinput.Model
+	body       textarea.Model
+	spin       spinner.Model
 
 	commitType string
 	scope      string
@@ -86,12 +96,21 @@ func New(service *app.CommitService, diff, stat string) Model {
 	typeList.SetShowStatusBar(false)
 	typeList.SetFilteringEnabled(false)
 
+	detailItems := []list.Item{
+		item{title: "[AIで生成]", desc: "Generate body/footer with AI"},
+		item{title: "[手動入力]", desc: "Enter body/footer manually"},
+	}
+	detailList := list.New(detailItems, list.NewDefaultDelegate(), 0, 0)
+	detailList.Title = "Select detail input"
+	detailList.SetShowStatusBar(false)
+	detailList.SetFilteringEnabled(false)
+
 	inp := textinput.New()
 	inp.Placeholder = "(optional) press Enter to skip"
 	inp.Focus()
 
 	ta := textarea.New()
-	ta.Placeholder = "(optional) press Ctrl+D to skip"
+	ta.Placeholder = "(optional) press Enter to skip"
 	ta.SetWidth(60)
 	ta.SetHeight(5)
 
@@ -100,14 +119,15 @@ func New(service *app.CommitService, diff, stat string) Model {
 	sp.Style = selectedStyle
 
 	return Model{
-		state:    stateSelectType,
-		service:  service,
-		diff:     diff,
-		stat:     stat,
-		typeList: typeList,
-		input:    inp,
-		body:     ta,
-		spin:     sp,
+		state:      stateSelectType,
+		service:    service,
+		diff:       diff,
+		stat:       stat,
+		typeList:   typeList,
+		detailList: detailList,
+		input:      inp,
+		body:       ta,
+		spin:       sp,
 	}
 }
 
@@ -121,6 +141,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.typeList.SetSize(msg.Width, msg.Height-4)
+		m.detailList.SetSize(msg.Width, msg.Height-4)
 		if len(m.msgList.Items()) > 0 {
 			m.msgList.SetSize(msg.Width, msg.Height-4)
 		}
@@ -136,6 +157,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case aiResultMsg:
 		return m.handleAIResult(msg)
+
+	case aiDetailResultMsg:
+		return m.handleAIDetailResult(msg)
 
 	case commitDoneMsg:
 		if msg.err != nil {
@@ -187,17 +211,17 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				switch i.title {
 				case "[手動入力]":
 					m.state = stateInputMsg
-					m.input.Placeholder = "commit subject"
+					m.input.Placeholder = m.subjectPlaceholder()
 					m.input.SetValue("")
 					m.input.Focus()
 				case "[再生成]":
 					m.state = stateAILoading
 					return m, tea.Batch(m.spin.Tick, m.generateAI())
 				default:
+					m.err = nil
 					m.subject = i.title
-					m.state = stateInputBody
-					m.body.SetValue("")
-					m.body.Focus()
+					m.state = stateSelectDetailMode
+					m.detailList.Select(0)
 				}
 			}
 			return m, nil
@@ -208,23 +232,54 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case stateInputMsg:
 		if msg.Type == tea.KeyEnter {
+			m.err = nil
 			m.subject = m.input.Value()
 			m.input.SetValue("")
-			m.state = stateInputBody
-			m.body.SetValue("")
-			m.body.Focus()
+			m.state = stateSelectDetailMode
+			m.detailList.Select(0)
 			return m, nil
 		}
 		var cmd tea.Cmd
 		m.input, cmd = m.input.Update(msg)
 		return m, cmd
 
+	case stateSelectDetailMode:
+		if msg.Type == tea.KeyEnter {
+			if i, ok := m.detailList.SelectedItem().(item); ok {
+				switch i.title {
+				case "[AIで生成]":
+					m.err = nil
+					m.state = stateDetailAILoading
+					return m, tea.Batch(m.spin.Tick, m.generateAIDetail())
+				default:
+					m.err = nil
+					m.bodyText = ""
+					m.footer = ""
+					m.state = stateInputBody
+					m.body.SetValue("")
+					m.body.Focus()
+				}
+			}
+			return m, nil
+		}
+		var cmd tea.Cmd
+		m.detailList, cmd = m.detailList.Update(msg)
+		return m, cmd
+
 	case stateInputBody:
+		if msg.Type == tea.KeyEnter && m.body.Value() == "" {
+			m.bodyText = ""
+			m.state = stateInputFooter
+			m.input.Placeholder = "(optional) footer, press Enter to skip"
+			m.input.SetValue(m.footer)
+			m.input.Focus()
+			return m, nil
+		}
 		if msg.Type == tea.KeyCtrlD {
 			m.bodyText = m.body.Value()
 			m.state = stateInputFooter
 			m.input.Placeholder = "(optional) footer, press Enter to skip"
-			m.input.SetValue("")
+			m.input.SetValue(m.footer)
 			m.input.Focus()
 			return m, nil
 		}
@@ -261,7 +316,7 @@ func (m Model) handleAIResult(msg aiResultMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil || len(msg.candidates) == 0 {
 		m.err = msg.err
 		m.state = stateInputMsg
-		m.input.Placeholder = "commit subject"
+		m.input.Placeholder = m.subjectPlaceholder()
 		m.input.SetValue("")
 		m.input.Focus()
 		return m, nil
@@ -272,7 +327,11 @@ func (m Model) handleAIResult(msg aiResultMsg) (tea.Model, tea.Cmd) {
 	for _, c := range msg.candidates {
 		items = append(items, item{title: c})
 	}
-	items = append(items, item{title: "[手動入力]", desc: "Enter a commit message manually"})
+	manualDesc := "Enter a commit message manually"
+	if m.commitType == "auto" {
+		manualDesc = "Enter a Conventional header manually"
+	}
+	items = append(items, item{title: "[手動入力]", desc: manualDesc})
 	items = append(items, item{title: "[再生成]", desc: "Re-generate with AI"})
 
 	m.msgList = list.New(items, list.NewDefaultDelegate(), m.width, m.height-4)
@@ -280,6 +339,26 @@ func (m Model) handleAIResult(msg aiResultMsg) (tea.Model, tea.Cmd) {
 	m.msgList.SetShowStatusBar(false)
 	m.msgList.SetFilteringEnabled(false)
 	m.state = stateSelectMsg
+	return m, nil
+}
+
+func (m Model) handleAIDetailResult(msg aiDetailResultMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil {
+		m.err = msg.err
+		m.bodyText = ""
+		m.footer = ""
+		m.state = stateInputBody
+		m.body.SetValue("")
+		m.body.Focus()
+		return m, nil
+	}
+
+	m.err = nil
+	m.bodyText = msg.body
+	m.footer = msg.footer
+	m.body.SetValue(msg.body)
+	m.state = stateInputBody
+	m.body.Focus()
 	return m, nil
 }
 
@@ -294,21 +373,52 @@ func (m Model) updateChildren(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.body, cmd = m.body.Update(msg)
 	case stateSelectMsg:
 		m.msgList, cmd = m.msgList.Update(msg)
+	case stateSelectDetailMode:
+		m.detailList, cmd = m.detailList.Update(msg)
 	}
 	return m, cmd
 }
 
 func (m Model) generateAI() tea.Cmd {
 	return func() tea.Msg {
-		candidates, err := m.service.GenerateCandidates(context.Background(), m.diff, m.stat, m.commitType, m.scope)
+		commitType := m.commitType
+		if commitType == "auto" {
+			commitType = ""
+		}
+		candidates, err := m.service.GenerateCandidates(context.Background(), m.diff, m.stat, commitType, m.scope)
 		return aiResultMsg{candidates: candidates, err: err}
 	}
+}
+
+func (m Model) generateAIDetail() tea.Cmd {
+	return func() tea.Msg {
+		commitType := m.commitType
+		if commitType == "auto" {
+			commitType = ""
+		}
+		body, footer, err := m.service.GenerateDetails(context.Background(), m.diff, m.stat, commitType, m.scope, m.subject)
+		return aiDetailResultMsg{body: body, footer: footer, err: err}
+	}
+}
+
+func (m Model) subjectPlaceholder() string {
+	if m.commitType == "auto" {
+		return "commit subject (Conventional header)"
+	}
+	return "commit subject"
+}
+
+func (m Model) commitTypeForMessage() string {
+	if m.commitType == "auto" {
+		return ""
+	}
+	return m.commitType
 }
 
 func (m Model) doCommit() tea.Cmd {
 	return func() tea.Msg {
 		c := &commit.ConventionalCommit{
-			Type:    m.commitType,
+			Type:    m.commitTypeForMessage(),
 			Scope:   m.scope,
 			Subject: m.subject,
 			Body:    m.bodyText,
@@ -371,12 +481,27 @@ func (m Model) View() string {
 			helpStyle.Render("Enter to confirm • Ctrl+C to quit"),
 		)
 
-	case stateInputBody:
+	case stateSelectDetailMode:
+		return m.detailList.View()
+
+	case stateDetailAILoading:
 		return fmt.Sprintf(
-			"%s\n\n%s\n\n%s",
+			"\n  %s Generating commit details...\n\n%s",
+			m.spin.View(),
+			helpStyle.Render("Ctrl+C to quit"),
+		)
+
+	case stateInputBody:
+		errMsg := ""
+		if m.err != nil {
+			errMsg = errorStyle.Render(fmt.Sprintf("AI error: %v\n\n", m.err))
+		}
+		return fmt.Sprintf(
+			"%s%s\n\n%s\n\n%s",
+			errMsg,
 			titleStyle.Render("Enter commit body (optional)"),
 			m.body.View(),
-			helpStyle.Render("Ctrl+D to skip • Ctrl+C to quit"),
+			helpStyle.Render("Enter to skip (empty) • Ctrl+D to confirm • Ctrl+C to quit"),
 		)
 
 	case stateInputFooter:
@@ -389,7 +514,7 @@ func (m Model) View() string {
 
 	case stateConfirm:
 		c := &commit.ConventionalCommit{
-			Type:    m.commitType,
+			Type:    m.commitTypeForMessage(),
 			Scope:   m.scope,
 			Subject: m.subject,
 			Body:    m.bodyText,

@@ -1,9 +1,0 @@
-provider   = "claude"
-# model    = "claude-3-5-sonnet"
-candidates = 3
-timeout    = 30
-
-[commit]
-use_emoji          = false
-max_subject_length = 100
-# scopes = ["feat", "fix", "docs", "refactor"]

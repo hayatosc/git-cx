@@ -14,6 +14,7 @@ import (
 // Provider is the interface for AI commit message generators.
 type Provider interface {
 	Generate(ctx context.Context, req GenerateRequest) ([]string, error)
+	GenerateDetail(ctx context.Context, req GenerateRequest) (string, string, error)
 	Name() string
 }
 
@@ -23,6 +24,7 @@ type GenerateRequest struct {
 	Stat       string // git diff --cached --stat の出力
 	CommitType string
 	Scope      string
+	Subject    string
 	Candidates int
 }
 
@@ -48,6 +50,24 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 
 // runCLI executes name with args, returning parsed candidate lines.
 func runCLI(ctx context.Context, runner execx.Runner, name string, args []string, timeout, max int) ([]string, error) {
+	output, err := runCLIOutput(ctx, runner, name, args, timeout)
+	if err != nil {
+		return nil, err
+	}
+	return parseOutput(output, max), nil
+}
+
+// runShell executes cmdStr via sh -c, returning parsed candidate lines.
+func runShell(ctx context.Context, runner execx.Runner, cmdStr string, timeout, max int) ([]string, error) {
+	output, err := runShellOutput(ctx, runner, cmdStr, timeout)
+	if err != nil {
+		return nil, err
+	}
+	return parseOutput(output, max), nil
+}
+
+// runCLIOutput executes name with args, returning raw stdout.
+func runCLIOutput(ctx context.Context, runner execx.Runner, name string, args []string, timeout int) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 	defer cancel()
 
@@ -57,13 +77,13 @@ func runCLI(ctx context.Context, runner execx.Runner, name string, args []string
 		if msg == "" {
 			msg = err.Error()
 		}
-		return nil, fmt.Errorf("%s failed: %s", name, msg)
+		return "", fmt.Errorf("%s failed: %s", name, msg)
 	}
-	return parseOutput(result.Stdout, max), nil
+	return result.Stdout, nil
 }
 
-// runShell executes cmdStr via sh -c, returning parsed candidate lines.
-func runShell(ctx context.Context, runner execx.Runner, cmdStr string, timeout, max int) ([]string, error) {
+// runShellOutput executes cmdStr via sh -c, returning raw stdout.
+func runShellOutput(ctx context.Context, runner execx.Runner, cmdStr string, timeout int) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 	defer cancel()
 
@@ -73,9 +93,9 @@ func runShell(ctx context.Context, runner execx.Runner, cmdStr string, timeout, 
 		if msg == "" {
 			msg = err.Error()
 		}
-		return nil, fmt.Errorf("command failed: %s", msg)
+		return "", fmt.Errorf("command failed: %s", msg)
 	}
-	return parseOutput(result.Stdout, max), nil
+	return result.Stdout, nil
 }
 
 // parseOutput extracts non-empty lines from output up to max count.

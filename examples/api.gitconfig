@@ -1,0 +1,11 @@
+[cx]
+  provider = api
+  model = gpt-5
+  apiBaseUrl = https://api.openai.com/v1
+  # OPENAI_API_KEY=... git cx
+[cx "commit"]
+  useEmoji = false
+  maxSubjectLength = 100
+  # scopes = feat
+  # scopes = fix
+  # scopes = docs
