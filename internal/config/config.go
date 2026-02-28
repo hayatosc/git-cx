@@ -28,6 +28,26 @@ type CommitConfig struct {
 
 // Load reads config from git config, falling back to defaults.
 func Load(ctx context.Context, runner git.Runner) (*Config, error) {
+	cfg := loadBase(ctx, runner)
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+// LoadWithFile reads config from git config and, if path is non-empty,
+// merges the TOML file at that path on top.
+func LoadWithFile(ctx context.Context, runner git.Runner, path string) (*Config, error) {
+	cfg := loadBase(ctx, runner)
+	if path != "" {
+		if err := ApplyTOML(cfg, path); err != nil {
+			return nil, fmt.Errorf("failed to load config file %q: %w", path, err)
+		}
+	}
+	return cfg, cfg.Validate()
+}
+
+func loadBase(ctx context.Context, runner git.Runner) *Config {
 	cfg := DefaultConfig()
 
 	if v := runner.ConfigGet(ctx, "cx.provider"); v != "" {
@@ -63,10 +83,7 @@ func Load(ctx context.Context, runner git.Runner) (*Config, error) {
 		cfg.Commit.Scopes = scopes
 	}
 
-	if err := cfg.Validate(); err != nil {
-		return nil, err
-	}
-	return cfg, nil
+	return cfg
 }
 
 // Validate checks config values for consistency.
