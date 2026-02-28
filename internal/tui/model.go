@@ -97,8 +97,8 @@ func New(service *app.CommitService, diff, stat string) Model {
 	typeList.SetFilteringEnabled(false)
 
 	detailItems := []list.Item{
-		item{title: "[AIで生成]", desc: "Generate body/footer with AI"},
-		item{title: "[手動入力]", desc: "Enter body/footer manually"},
+		item{title: "[Generate with AI]", desc: "Generate body/footer with AI"},
+		item{title: "[Manual entry]", desc: "Enter body/footer manually"},
 	}
 	detailList := list.New(detailItems, list.NewDefaultDelegate(), 0, 0)
 	detailList.Title = "Select detail input"
@@ -209,12 +209,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if msg.Type == tea.KeyEnter {
 			if i, ok := m.msgList.SelectedItem().(item); ok {
 				switch i.title {
-				case "[手動入力]":
+				case "[Manual entry]":
 					m.state = stateInputMsg
 					m.input.Placeholder = m.subjectPlaceholder()
 					m.input.SetValue("")
 					m.input.Focus()
-				case "[再生成]":
+				case "[Regenerate]":
 					m.state = stateAILoading
 					return m, tea.Batch(m.spin.Tick, m.generateAI())
 				default:
@@ -247,7 +247,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if msg.Type == tea.KeyEnter {
 			if i, ok := m.detailList.SelectedItem().(item); ok {
 				switch i.title {
-				case "[AIで生成]":
+				case "[Generate with AI]":
 					m.err = nil
 					m.state = stateDetailAILoading
 					return m, tea.Batch(m.spin.Tick, m.generateAIDetail())
@@ -331,8 +331,8 @@ func (m Model) handleAIResult(msg aiResultMsg) (tea.Model, tea.Cmd) {
 	if m.commitType == "auto" {
 		manualDesc = "Enter a Conventional header manually"
 	}
-	items = append(items, item{title: "[手動入力]", desc: manualDesc})
-	items = append(items, item{title: "[再生成]", desc: "Re-generate with AI"})
+	items = append(items, item{title: "[Manual entry]", desc: manualDesc})
+	items = append(items, item{title: "[Regenerate]", desc: "Regenerate with AI"})
 
 	m.msgList = list.New(items, list.NewDefaultDelegate(), m.width, m.height-4)
 	m.msgList.Title = "Select commit message"
