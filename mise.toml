@@ -10,3 +10,6 @@ run = "go build -o output/git-cx ."
 
 [tasks.check]
 run = "go vet ./..."
+
+[tasks.test]
+run = "go test ./..."

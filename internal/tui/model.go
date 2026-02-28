@@ -10,10 +10,8 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"git-cx/internal/ai"
+	"git-cx/internal/app"
 	"git-cx/internal/commit"
-	"git-cx/internal/config"
-	"git-cx/internal/git"
 )
 
 // State represents TUI step.
@@ -51,11 +49,10 @@ type commitDoneMsg struct{ err error }
 
 // Model is the bubbletea model.
 type Model struct {
-	state    State
-	cfg      *config.Config
-	provider ai.Provider
-	diff     string
-	stat     string
+	state   State
+	service *app.CommitService
+	diff    string
+	stat    string
 
 	typeList list.Model
 	msgList  list.Model
@@ -78,7 +75,7 @@ type Model struct {
 }
 
 // New creates a new TUI Model.
-func New(cfg *config.Config, provider ai.Provider, diff, stat string) Model {
+func New(service *app.CommitService, diff, stat string) Model {
 	// Type selector list
 	typeItems := make([]list.Item, len(commit.CommitTypes))
 	for i, t := range commit.CommitTypes {
@@ -104,8 +101,7 @@ func New(cfg *config.Config, provider ai.Provider, diff, stat string) Model {
 
 	return Model{
 		state:    stateSelectType,
-		cfg:      cfg,
-		provider: provider,
+		service:  service,
 		diff:     diff,
 		stat:     stat,
 		typeList: typeList,
@@ -304,14 +300,7 @@ func (m Model) updateChildren(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) generateAI() tea.Cmd {
 	return func() tea.Msg {
-		req := ai.GenerateRequest{
-			Diff:       m.diff,
-			Stat:       m.stat,
-			CommitType: m.commitType,
-			Scope:      m.scope,
-			Candidates: m.cfg.Candidates,
-		}
-		candidates, err := m.provider.Generate(context.Background(), req)
+		candidates, err := m.service.GenerateCandidates(context.Background(), m.diff, m.stat, m.commitType, m.scope)
 		return aiResultMsg{candidates: candidates, err: err}
 	}
 }
@@ -325,37 +314,10 @@ func (m Model) doCommit() tea.Cmd {
 			Body:    m.bodyText,
 			Footer:  m.footer,
 		}
-		msg := buildCommitMessage(m, c)
-		err := git.Commit(msg)
+		msg := m.service.BuildMessage(c)
+		err := m.service.Commit(context.Background(), msg)
 		return commitDoneMsg{err: err}
 	}
-}
-
-// buildCommitMessage decides whether to format or use raw subject.
-func buildCommitMessage(m Model, c *commit.ConventionalCommit) string {
-	if isConventionalHeader(c.Subject) {
-		result := c.Subject
-		if c.Body != "" {
-			result += "\n\n" + c.Body
-		}
-		if c.Footer != "" {
-			result += "\n\n" + c.Footer
-		}
-		return result
-	}
-	return commit.Format(c, m.cfg.Commit.UseEmoji, m.cfg.Commit.MaxSubjectLength)
-}
-
-func isConventionalHeader(s string) bool {
-	for _, t := range commit.CommitTypes {
-		if len(s) > len(t) && s[:len(t)] == t {
-			rest := s[len(t):]
-			if len(rest) > 0 && (rest[0] == '(' || rest[0] == ':' || rest[0] == '!') {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 // View renders the current state.
@@ -433,7 +395,7 @@ func (m Model) View() string {
 			Body:    m.bodyText,
 			Footer:  m.footer,
 		}
-		preview := buildCommitMessage(m, c)
+		preview := m.service.BuildMessage(c)
 		return fmt.Sprintf(
 			"%s\n\n%s\n\n%s",
 			titleStyle.Render("Confirm commit message"),

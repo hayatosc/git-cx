@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"git-cx/internal/ai"
+	"git-cx/internal/app"
 	"git-cx/internal/config"
 	"git-cx/internal/git"
 	"git-cx/internal/tui"
@@ -41,53 +43,85 @@ func main() {
 	}
 }
 
-func loadConfig(cmd *cobra.Command) (*config.Config, error) {
-	path, err := cmd.Flags().GetString("config")
+func loadConfig(cmd *cobra.Command, runner git.Runner) (*config.Config, error) {
+	ctx := context.Background()
+	flags := cmd.Flags()
+	path, err := flags.GetString("config")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config flag: %w", err)
 	}
-	cfg, err := config.LoadWithFile(path)
+	cfg, err := config.LoadWithFile(ctx, runner, path)
 	if err != nil {
 		return nil, err
 	}
-	if cmd.Flags().Changed("provider") {
-		v, _ := cmd.Flags().GetString("provider")
+	if flags.Changed("provider") {
+		v, err := flags.GetString("provider")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read provider flag: %w", err)
+		}
 		cfg.Provider = v
 	}
-	if cmd.Flags().Changed("model") {
-		v, _ := cmd.Flags().GetString("model")
+	if flags.Changed("model") {
+		v, err := flags.GetString("model")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read model flag: %w", err)
+		}
 		cfg.Model = v
 	}
-	if cmd.Flags().Changed("candidates") {
-		v, _ := cmd.Flags().GetInt("candidates")
+	if flags.Changed("candidates") {
+		v, err := flags.GetInt("candidates")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read candidates flag: %w", err)
+		}
 		cfg.Candidates = v
 	}
-	if cmd.Flags().Changed("timeout") {
-		v, _ := cmd.Flags().GetInt("timeout")
+	if flags.Changed("timeout") {
+		v, err := flags.GetInt("timeout")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read timeout flag: %w", err)
+		}
 		cfg.Timeout = v
 	}
-	if cmd.Flags().Changed("command") {
-		v, _ := cmd.Flags().GetString("command")
+	if flags.Changed("command") {
+		v, err := flags.GetString("command")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read command flag: %w", err)
+		}
 		cfg.Command = v
 	}
-	if cmd.Flags().Changed("use-emoji") {
-		v, _ := cmd.Flags().GetBool("use-emoji")
+	if flags.Changed("use-emoji") {
+		v, err := flags.GetBool("use-emoji")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read use-emoji flag: %w", err)
+		}
 		cfg.Commit.UseEmoji = v
 	}
-	if cmd.Flags().Changed("max-subject-length") {
-		v, _ := cmd.Flags().GetInt("max-subject-length")
+	if flags.Changed("max-subject-length") {
+		v, err := flags.GetInt("max-subject-length")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read max-subject-length flag: %w", err)
+		}
 		cfg.Commit.MaxSubjectLength = v
 	}
-	return cfg, nil
+	return cfg, cfg.Validate()
 }
 
 func runCommit(cmd *cobra.Command, _ []string) error {
-	cfg, err := loadConfig(cmd)
+	ctx := context.Background()
+	gitRunner := git.NewRunner()
+
+	cfg, err := loadConfig(cmd, gitRunner)
 	if err != nil {
 		return err
 	}
 
-	diff, err := git.StagedDiff()
+	provider, err := ai.NewProvider(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to initialize AI provider: %w", err)
+	}
+
+	commitService := app.NewCommitService(cfg, provider, gitRunner)
+	diff, stat, err := commitService.StagedChanges(ctx)
 	if err != nil {
 		if errors.Is(err, git.ErrNoStagedChanges) {
 			fmt.Fprintln(os.Stderr, "Error: no staged changes. Run 'git add' first.")
@@ -96,14 +130,7 @@ func runCommit(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to get staged diff: %w", err)
 	}
 
-	stat, _ := git.StagedStat()
-
-	provider, err := ai.NewProvider(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to initialize AI provider: %w", err)
-	}
-
-	m := tui.New(cfg, provider, diff, stat)
+	m := tui.New(commitService, diff, stat)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("TUI error: %w", err)
@@ -136,7 +163,7 @@ Example:
   git config --global cx.timeout 30
 `,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cfg, err := loadConfig(cmd)
+			cfg, err := loadConfig(cmd, git.NewRunner())
 			if err != nil {
 				return err
 			}
