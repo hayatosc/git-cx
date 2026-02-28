@@ -34,7 +34,7 @@ func main() {
 	root.PersistentFlags().Int("timeout", 0, "request timeout in seconds")
 	root.PersistentFlags().String("command", "", "command template for custom provider")
 	root.PersistentFlags().String("api-base-url", "", "base URL for api provider")
-	root.PersistentFlags().String("api-key", "", "API key for api provider")
+	root.PersistentFlags().String("api-key", "", "(deprecated) ignored; use OPENAI_API_KEY env instead")
 	root.PersistentFlags().Bool("use-emoji", false, "prefix commit type with emoji")
 	root.PersistentFlags().Int("max-subject-length", 0, "max length of commit subject line")
 
@@ -100,11 +100,7 @@ func loadConfig(cmd *cobra.Command, runner git.Runner) (*config.Config, error) {
 		cfg.API.BaseURL = v
 	}
 	if flags.Changed("api-key") {
-		v, err := flags.GetString("api-key")
-		if err != nil {
-			return nil, fmt.Errorf("failed to read api-key flag: %w", err)
-		}
-		cfg.API.Key = v
+		// deprecated: ignore for now
 	}
 	if flags.Changed("use-emoji") {
 		v, err := flags.GetBool("use-emoji")
@@ -179,7 +175,7 @@ Example:
 	  git config --global cx.candidates 3
 	  git config --global cx.timeout 30
 	  git config --global cx.apiBaseUrl https://api.openai.com/v1
-	  git config --global cx.apiKey YOUR_API_KEY
+	  # OPENAI_API_KEY=... git cx
 `,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg, err := loadConfig(cmd, git.NewRunner())
@@ -200,7 +196,7 @@ Example:
 			if strings.TrimSpace(cfg.API.Key) != "" {
 				keyStatus = "<set>"
 			}
-			fmt.Printf("apiKey:                    %s\n", keyStatus)
+			fmt.Printf("apiKey (OPENAI_API_KEY):   %s\n", keyStatus)
 			fmt.Printf("commit.useEmoji:           %v\n", cfg.Commit.UseEmoji)
 			fmt.Printf("commit.maxSubjectLength:   %d\n", cfg.Commit.MaxSubjectLength)
 			if len(cfg.Commit.Scopes) > 0 {

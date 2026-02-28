@@ -58,10 +58,10 @@ func TestAPIProviderGenerate_SendsRequestAndParsesResponse(t *testing.T) {
 		Timeout:    2,
 		API: config.APIConfig{
 			BaseURL: server.URL + "/v1/",
-			Key:     "test-key",
 		},
 	}
 	provider := NewAPIProvider(cfg)
+	provider.apiKey = "test-key"
 
 	got, err := provider.Generate(context.Background(), GenerateRequest{Diff: "diff", Candidates: 2})
 	if err != nil {
@@ -101,10 +101,10 @@ func TestAPIProviderGenerate_ReturnsErrorMessage(t *testing.T) {
 		Timeout:    2,
 		API: config.APIConfig{
 			BaseURL: server.URL,
-			Key:     "test-key",
 		},
 	}
 	provider := NewAPIProvider(cfg)
+	provider.apiKey = "test-key"
 
 	_, err := provider.Generate(context.Background(), GenerateRequest{Diff: "diff", Candidates: 1})
 	if err == nil || !strings.Contains(err.Error(), "invalid key") {

@@ -86,18 +86,8 @@ func loadBase(ctx context.Context, runner git.Runner) *Config {
 			cfg.API.BaseURL = v
 		}
 	}
-	if v := runner.ConfigGet(ctx, "cx.apiKey"); v != "" {
+	if v := strings.TrimSpace(os.Getenv("OPENAI_API_KEY")); v != "" {
 		cfg.API.Key = v
-	}
-	if cfg.API.Key == "" {
-		if v := runner.ConfigGet(ctx, "cx.api.key"); v != "" {
-			cfg.API.Key = v
-		}
-	}
-	if cfg.API.Key == "" {
-		if v := strings.TrimSpace(os.Getenv("OPENAI_API_KEY")); v != "" {
-			cfg.API.Key = v
-		}
 	}
 
 	// Commit formatting

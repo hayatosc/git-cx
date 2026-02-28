@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 )
@@ -14,14 +15,12 @@ type tomlConfig struct {
 	Timeout    *int        `toml:"timeout"`
 	Command    *string     `toml:"command"`
 	APIBaseURL *string     `toml:"api_base_url"`
-	APIKey     *string     `toml:"api_key"`
 	API        *tomlAPI    `toml:"api"`
 	Commit     *tomlCommit `toml:"commit"`
 }
 
 type tomlAPI struct {
 	BaseURL *string `toml:"base_url"`
-	Key     *string `toml:"key"`
 }
 
 type tomlCommit struct {
@@ -43,7 +42,19 @@ func ApplyTOML(cfg *Config, path string) error {
 		return fmt.Errorf("parse config file: %w", err)
 	}
 	if undecoded := meta.Undecoded(); len(undecoded) > 0 {
-		return fmt.Errorf("parse config file: unknown keys: %v", undecoded)
+		var unknown []toml.Key
+		for _, key := range undecoded {
+			keyName := strings.Join([]string(key), ".")
+			switch keyName {
+			case "api_key", "api.key":
+				continue
+			default:
+				unknown = append(unknown, key)
+			}
+		}
+		if len(unknown) > 0 {
+			return fmt.Errorf("parse config file: unknown keys: %v", unknown)
+		}
 	}
 	if tc.Provider != nil {
 		cfg.Provider = *tc.Provider
@@ -63,15 +74,9 @@ func ApplyTOML(cfg *Config, path string) error {
 	if tc.APIBaseURL != nil {
 		cfg.API.BaseURL = *tc.APIBaseURL
 	}
-	if tc.APIKey != nil {
-		cfg.API.Key = *tc.APIKey
-	}
 	if tc.API != nil {
 		if tc.API.BaseURL != nil {
 			cfg.API.BaseURL = *tc.API.BaseURL
-		}
-		if tc.API.Key != nil {
-			cfg.API.Key = *tc.API.Key
 		}
 	}
 	if tc.Commit != nil {

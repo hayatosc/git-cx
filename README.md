@@ -35,7 +35,7 @@ $ ./output/git-cx
 
 ## Configuration
 
-Configure via `git config` or TOML. All options can be overridden by flags per invocation.
+Configure via `git config` or TOML. All options can be overridden by flags per invocation. The API key is read only from `OPENAI_API_KEY`.
 
 ### git config
 
@@ -53,7 +53,7 @@ $ git config --global cx.commit.scopes feat
 $ git config --global cx.provider api
 $ git config --global cx.model gpt-5
 $ git config --global cx.apiBaseUrl https://api.openai.com/v1
-$ git config --global cx.apiKey YOUR_API_KEY
+$ OPENAI_API_KEY=YOUR_API_KEY git cx
 ```
 
 ### .gitconfig example
@@ -77,7 +77,6 @@ $ git config --global cx.apiKey YOUR_API_KEY
   provider = api
   model = gpt-5
   apiBaseUrl = https://api.openai.com/v1
-  apiKey = YOUR_API_KEY
 ```
 
 ### TOML
@@ -97,7 +96,7 @@ $ git cx --provider gemini --model gemini-3.0-flash
 $ git cx --candidates 3 --timeout 30
 $ git cx --use-emoji --max-subject-length 100
 $ git cx --command "my-cli --prompt {prompt}"
-$ git cx --provider api --model gpt-5 --api-base-url https://api.openai.com/v1 --api-key YOUR_API_KEY
+$ OPENAI_API_KEY=YOUR_API_KEY git cx --provider api --model gpt-5 --api-base-url https://api.openai.com/v1
 ```
 
 ### Configuration mapping
@@ -110,12 +109,12 @@ $ git cx --provider api --model gpt-5 --api-base-url https://api.openai.com/v1 -
 | timeout | `cx.timeout` | `[cx] timeout` | `timeout` | `--timeout` | seconds |
 | command | `cx.command` | `[cx] command` | `command` | `--command` | custom provider only |
 | apiBaseUrl | `cx.apiBaseUrl` | `[cx] apiBaseUrl` | `api_base_url` | `--api-base-url` | OpenAI-compatible base URL |
-| apiKey | `cx.apiKey` | `[cx] apiKey` | `api_key` | `--api-key` | fallback: `OPENAI_API_KEY` |
+| apiKey | (not supported) | (not supported) | (not supported) | (deprecated) `--api-key` | use `OPENAI_API_KEY` |
 | commit.useEmoji | `cx.commit.useEmoji` | `[cx "commit"] useEmoji` | `[commit] use_emoji` | `--use-emoji` | adds emoji prefix |
 | commit.maxSubjectLength | `cx.commit.maxSubjectLength` | `[cx "commit"] maxSubjectLength` | `[commit] max_subject_length` | `--max-subject-length` | 0 disables limit |
 | commit.scopes | `cx.commit.scopes` | `[cx "commit"] scopes` | `[commit] scopes` | (none) | repeatable in git config |
 
-Legacy keys still accepted: `cx.api.baseUrl`, `cx.api.key`, and `[api] base_url/key`.
+Legacy keys for API base URL are still accepted (`cx.api.baseUrl`, `[api] base_url`). API keys in config are ignored.
 
 ## Providers
 
@@ -125,10 +124,10 @@ Select the provider with `cx.provider`.
 - `copilot`: uses the `copilot` CLI
 - `claude`: uses the `claude` CLI
 - `codex`: uses the `codex exec` CLI
-- `api`: uses an OpenAI-compatible API endpoint (set `cx.apiBaseUrl` and `cx.apiKey`)
+- `api`: uses an OpenAI-compatible API endpoint (set `cx.apiBaseUrl` and `OPENAI_API_KEY`)
 - `custom`: runs the command in `cx.command` (replaces `{prompt}`)
 
-For the `api` provider, set `cx.apiBaseUrl` to your OpenAI-compatible endpoint (e.g. `https://api.openai.com/v1`, `https://openrouter.ai/api/v1`, `http://localhost:8000/v1`) and set `cx.apiKey` or `OPENAI_API_KEY`.
+For the `api` provider, set `cx.apiBaseUrl` to your OpenAI-compatible endpoint (e.g. `https://api.openai.com/v1`, `https://openrouter.ai/api/v1`, `http://localhost:8000/v1`) and set `OPENAI_API_KEY`.
 
 ## Development
 
