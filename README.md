@@ -87,6 +87,14 @@ Select the provider with `cx.provider`.
 - `copilot`: uses the `copilot` CLI
 - `custom`: runs the command in `cx.command` (replaces `{prompt}`)
 
+## Commit type
+
+Type selection includes `auto` to let AI decide the Conventional Commit header. When `auto` is selected, manual input expects a full Conventional header (e.g. `feat(core): add feature`).
+
+## Commit details
+
+After selecting a subject, you can choose to generate the body/footer with AI or enter them manually. The body input can be skipped by pressing Enter on an empty textarea.
+
 ## Development
 
 ``` console

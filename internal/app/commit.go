@@ -48,6 +48,19 @@ func (s *CommitService) GenerateCandidates(ctx context.Context, diff, stat, comm
 	return s.provider.Generate(ctx, req)
 }
 
+// GenerateDetails generates commit body and footer.
+func (s *CommitService) GenerateDetails(ctx context.Context, diff, stat, commitType, scope, subject string) (string, string, error) {
+	req := ai.GenerateRequest{
+		Diff:       diff,
+		Stat:       stat,
+		CommitType: commitType,
+		Scope:      scope,
+		Subject:    subject,
+		Candidates: 1,
+	}
+	return s.provider.GenerateDetail(ctx, req)
+}
+
 // BuildMessage formats commit message.
 func (s *CommitService) BuildMessage(c *commit.ConventionalCommit) string {
 	return commit.BuildMessage(c, s.cfg.Commit.UseEmoji, s.cfg.Commit.MaxSubjectLength)

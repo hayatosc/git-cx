@@ -6,8 +6,11 @@ import "context"
 type MockProvider struct {
 	NameValue  string
 	Candidates []string
+	Body       string
+	Footer     string
 	Err        error
 	LastReq    *GenerateRequest
+	LastDetail *GenerateRequest
 }
 
 func (m *MockProvider) Generate(ctx context.Context, req GenerateRequest) ([]string, error) {
@@ -17,6 +20,15 @@ func (m *MockProvider) Generate(ctx context.Context, req GenerateRequest) ([]str
 		return nil, m.Err
 	}
 	return m.Candidates, nil
+}
+
+func (m *MockProvider) GenerateDetail(ctx context.Context, req GenerateRequest) (string, string, error) {
+	_ = ctx
+	m.LastDetail = &req
+	if m.Err != nil {
+		return "", "", m.Err
+	}
+	return m.Body, m.Footer, nil
 }
 
 func (m *MockProvider) Name() string {
