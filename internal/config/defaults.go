@@ -4,7 +4,7 @@ package config
 func DefaultConfig() *Config {
 	return &Config{
 		Provider:   "gemini",
-		Model:      "gemini-2.0-flash",
+		Model:      "gemini-3.0-flash",
 		Candidates: 3,
 		Timeout:    30,
 		Commit: CommitConfig{

@@ -77,7 +77,7 @@ Use 'git config --global cx.<key> <value>' to set values.
 
 Example:
   git config --global cx.provider gemini
-  git config --global cx.model gemini-2.0-flash
+  git config --global cx.model gemini-3.0-flash
   git config --global cx.candidates 3
   git config --global cx.timeout 30
 `,

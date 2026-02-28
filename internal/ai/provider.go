@@ -21,6 +21,7 @@ type Provider interface {
 // GenerateRequest holds the input for a generate call.
 type GenerateRequest struct {
 	Diff       string
+	Stat       string // git diff --cached --stat の出力
 	CommitType string
 	Scope      string
 	Candidates int

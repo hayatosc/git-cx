@@ -26,6 +26,9 @@ func (p *GeminiProvider) Name() string { return "gemini" }
 
 func (p *GeminiProvider) Generate(ctx context.Context, req GenerateRequest) ([]string, error) {
 	prompt := buildPrompt(req)
-	args := []string{"-m", p.model, "-p", prompt}
+	args := []string{"-p", prompt}
+	if p.model != "" {
+		args = append(args, "-m", p.model)
+	}
 	return runCLI(ctx, "gemini", args, p.timeout, p.candidates)
 }

@@ -8,6 +8,7 @@ import (
 
 // CopilotProvider calls GitHub Copilot CLI to generate commit messages.
 type CopilotProvider struct {
+	model      string
 	candidates int
 	timeout    int
 }
@@ -15,6 +16,7 @@ type CopilotProvider struct {
 // NewCopilotProvider creates a CopilotProvider from config.
 func NewCopilotProvider(cfg *config.Config) *CopilotProvider {
 	return &CopilotProvider{
+		model:      cfg.Model,
 		candidates: cfg.Candidates,
 		timeout:    cfg.Timeout,
 	}
@@ -24,6 +26,9 @@ func (p *CopilotProvider) Name() string { return "copilot" }
 
 func (p *CopilotProvider) Generate(ctx context.Context, req GenerateRequest) ([]string, error) {
 	prompt := buildPrompt(req)
-	args := []string{"copilot", "suggest", "-t", "git", prompt}
-	return runCLI(ctx, "gh", args, p.timeout, p.candidates)
+	args := []string{"-p", prompt}
+	if p.model != "" {
+		args = append(args, "--model", p.model)
+	}
+	return runCLI(ctx, "copilot", args, p.timeout, p.candidates)
 }
