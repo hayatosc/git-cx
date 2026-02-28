@@ -8,58 +8,66 @@ import (
 	"git-cx/internal/git"
 )
 
+func getFirstConfigValue(entries map[string][]string, key string) string {
+	if entries == nil {
+		return ""
+	}
+	values, ok := entries[key]
+	if !ok || len(values) == 0 {
+		return ""
+	}
+	return values[0]
+}
+
+func getAllConfigValues(entries map[string][]string, key string) []string {
+	if entries == nil {
+		return nil
+	}
+	values, ok := entries[key]
+	if !ok {
+		return nil
+	}
+	return values
+}
+
 // ApplyGitConfigFile merges values from a gitconfig-format file into cfg.
 func ApplyGitConfigFile(ctx context.Context, runner git.Runner, cfg *Config, path string) error {
-	if err := assertReadableGitConfigFile(ctx, runner, path); err != nil {
-		return err
+	entries, err := runner.ConfigListFromFile(ctx, path)
+	if err != nil {
+		return fmt.Errorf("read git config file %q: %w", path, err)
 	}
-	if v, err := runner.ConfigGetFromFile(ctx, path, "cx.provider"); err != nil {
-		return err
-	} else if v != "" {
+
+	if v := getFirstConfigValue(entries, "cx.provider"); v != "" {
 		cfg.Provider = v
 	}
-	if v, err := runner.ConfigGetFromFile(ctx, path, "cx.model"); err != nil {
-		return err
-	} else if v != "" {
+	if v := getFirstConfigValue(entries, "cx.model"); v != "" {
 		cfg.Model = v
 	}
-	if v, err := runner.ConfigGetFromFile(ctx, path, "cx.candidates"); err != nil {
-		return err
-	} else if v != "" {
+	if v := getFirstConfigValue(entries, "cx.candidates"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.Candidates = n
 		}
 	}
-	if v, err := runner.ConfigGetFromFile(ctx, path, "cx.timeout"); err != nil {
-		return err
-	} else if v != "" {
+	if v := getFirstConfigValue(entries, "cx.timeout"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.Timeout = n
 		}
 	}
-	if v, err := runner.ConfigGetFromFile(ctx, path, "cx.command"); err != nil {
-		return err
-	} else if v != "" {
+	if v := getFirstConfigValue(entries, "cx.command"); v != "" {
 		cfg.Command = v
 	}
 
-	if v, err := runner.ConfigGetFromFile(ctx, path, "cx.commit.useEmoji"); err != nil {
-		return err
-	} else if v != "" {
+	if v := getFirstConfigValue(entries, "cx.commit.useEmoji"); v != "" {
 		if b, ok := parseGitBool(v); ok {
 			cfg.Commit.UseEmoji = b
 		}
 	}
-	if v, err := runner.ConfigGetFromFile(ctx, path, "cx.commit.maxSubjectLength"); err != nil {
-		return err
-	} else if v != "" {
+	if v := getFirstConfigValue(entries, "cx.commit.maxSubjectLength"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.Commit.MaxSubjectLength = n
 		}
 	}
-	if scopes, err := runner.ConfigGetAllFromFile(ctx, path, "cx.commit.scopes"); err != nil {
-		return err
-	} else if len(scopes) > 0 {
+	if scopes := getAllConfigValues(entries, "cx.commit.scopes"); len(scopes) > 0 {
 		cfg.Commit.Scopes = scopes
 	}
 	return nil
