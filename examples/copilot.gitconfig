@@ -7,3 +7,5 @@
   useEmoji = false
   maxSubjectLength = 100
   # scopes = feat
+  # scopes = fix
+  # scopes = docs
