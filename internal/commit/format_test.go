@@ -31,12 +31,12 @@ func TestBuildMessage_Format(t *testing.T) {
 func TestBuildMessage_EmptyType(t *testing.T) {
 	c := &ConventionalCommit{
 		Type:    "",
-		Subject: "feat(core): add feature",
+		Subject: "add feature",
 		Body:    "details",
 		Footer:  "Refs: #1",
 	}
 	got := BuildMessage(c, false, 72)
-	want := "feat(core): add feature\n\ndetails\n\nRefs: #1"
+	want := "add feature\n\ndetails\n\nRefs: #1"
 	if got != want {
 		t.Fatalf("unexpected message:\n%s", got)
 	}

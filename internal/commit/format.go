@@ -46,26 +46,23 @@ func Format(c *ConventionalCommit, useEmoji bool, maxSubjectLen int) string {
 // BuildMessage decides whether to format or use raw subject.
 func BuildMessage(c *ConventionalCommit, useEmoji bool, maxSubjectLen int) string {
 	if isConventionalHeader(c.Subject) {
-		result := c.Subject
-		if c.Body != "" {
-			result += "\n\n" + c.Body
-		}
-		if c.Footer != "" {
-			result += "\n\n" + c.Footer
-		}
-		return result
+		return buildRawMessage(c.Subject, c.Body, c.Footer)
 	}
 	if c.Type == "" {
-		result := c.Subject
-		if c.Body != "" {
-			result += "\n\n" + c.Body
-		}
-		if c.Footer != "" {
-			result += "\n\n" + c.Footer
-		}
-		return result
+		return buildRawMessage(c.Subject, c.Body, c.Footer)
 	}
 	return Format(c, useEmoji, maxSubjectLen)
+}
+
+func buildRawMessage(subject, body, footer string) string {
+	result := subject
+	if body != "" {
+		result += "\n\n" + body
+	}
+	if footer != "" {
+		result += "\n\n" + footer
+	}
+	return result
 }
 
 func isConventionalHeader(s string) bool {
