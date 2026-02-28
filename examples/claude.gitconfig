@@ -1,0 +1,11 @@
+[cx]
+  provider = claude
+  # model = claude-3-5-sonnet
+  candidates = 3
+  timeout = 30
+[cx "commit"]
+  useEmoji = false
+  maxSubjectLength = 100
+  # scopes = feat
+  # scopes = fix
+  # scopes = docs

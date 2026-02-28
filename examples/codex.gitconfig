@@ -1,0 +1,11 @@
+[cx]
+  provider = codex
+  # model = gpt-5
+  candidates = 3
+  timeout = 30
+[cx "commit"]
+  useEmoji = false
+  maxSubjectLength = 100
+  # scopes = feat
+  # scopes = fix
+  # scopes = docs

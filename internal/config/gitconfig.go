@@ -61,6 +61,12 @@ func ApplyGitConfigFile(ctx context.Context, runner git.Runner, cfg *Config, pat
 	if v := getFirstConfigValue(entries, "cx.command"); v != "" {
 		cfg.Command = v
 	}
+	if v := getFirstConfigValue(entries, "cx.apiBaseUrl"); v != "" {
+		cfg.API.BaseURL = v
+	}
+	if v := getFirstConfigValue(entries, "cx.api.baseUrl"); v != "" {
+		cfg.API.BaseURL = v
+	}
 
 	if v := getFirstConfigValue(entries, "cx.commit.useEmoji"); v != "" {
 		b, err := parseBoolConfig("cx.commit.useEmoji", v)
