@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"git-cx/internal/execx"
@@ -11,11 +12,12 @@ import (
 func TestLoadWithFile_GitConfigFormatOverrides(t *testing.T) {
 	mock := &execx.MockRunner{
 		Results: map[string]execx.Result{
+			"git\x00config\x00--file\x00/tmp/cx.conf\x00--list":                              {Stdout: "cx.provider=copilot\n"},
 			"git\x00config\x00--file\x00/tmp/cx.conf\x00--get\x00cx.provider":                {Stdout: "copilot\n"},
 			"git\x00config\x00--file\x00/tmp/cx.conf\x00--get\x00cx.model":                   {Stdout: "gpt-4o\n"},
 			"git\x00config\x00--file\x00/tmp/cx.conf\x00--get\x00cx.candidates":              {Stdout: "5\n"},
 			"git\x00config\x00--file\x00/tmp/cx.conf\x00--get\x00cx.timeout":                 {Stdout: "45\n"},
-			"git\x00config\x00--file\x00/tmp/cx.conf\x00--get\x00cx.commit.useEmoji":         {Stdout: "true\n"},
+			"git\x00config\x00--file\x00/tmp/cx.conf\x00--get\x00cx.commit.useEmoji":         {Stdout: "yes\n"},
 			"git\x00config\x00--file\x00/tmp/cx.conf\x00--get\x00cx.commit.maxSubjectLength": {Stdout: "80\n"},
 			"git\x00config\x00--file\x00/tmp/cx.conf\x00--get-all\x00cx.commit.scopes":       {Stdout: "core\ncli\n"},
 		},
@@ -37,5 +39,18 @@ func TestLoadWithFile_GitConfigFormatOverrides(t *testing.T) {
 	}
 	if len(cfg.Commit.Scopes) != 2 || cfg.Commit.Scopes[0] != "core" || cfg.Commit.Scopes[1] != "cli" {
 		t.Fatalf("unexpected scopes: %#v", cfg.Commit.Scopes)
+	}
+}
+
+func TestLoadWithFile_GitConfigFormatMissingFile(t *testing.T) {
+	mock := &execx.MockRunner{
+		Errors: map[string]error{
+			"git\x00config\x00--file\x00/tmp/missing.conf\x00--list": errors.New("exit status 128"),
+		},
+	}
+
+	_, err := LoadWithFile(context.Background(), git.NewRunnerWithExecutor(mock), "/tmp/missing.conf")
+	if err == nil {
+		t.Fatalf("expected error for missing config file")
 	}
 }

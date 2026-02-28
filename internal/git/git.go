@@ -66,13 +66,17 @@ func (r Runner) ConfigGet(ctx context.Context, key string) string {
 	return strings.TrimSpace(out)
 }
 
-// ConfigGetFromFile reads a git config value from a config file. Returns "" if not set.
-func (r Runner) ConfigGetFromFile(ctx context.Context, path, key string) string {
+// ConfigGetFromFile reads a git config value from a config file.
+// Returns "" and nil if the key is not set.
+func (r Runner) ConfigGetFromFile(ctx context.Context, path, key string) (string, error) {
 	out, err := r.run(ctx, "git", "config", "--file", path, "--get", key)
 	if err != nil {
-		return ""
+		if isGitConfigNotFound(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("git config --file %s --get %s: %w", path, key, err)
 	}
-	return strings.TrimSpace(out)
+	return strings.TrimSpace(out), nil
 }
 
 // ConfigGetAll reads multiple values for a key (e.g. repeated keys).
@@ -91,10 +95,14 @@ func (r Runner) ConfigGetAll(ctx context.Context, key string) []string {
 }
 
 // ConfigGetAllFromFile reads multiple values for a key from a config file.
-func (r Runner) ConfigGetAllFromFile(ctx context.Context, path, key string) []string {
+// Returns nil and nil if the key is not set.
+func (r Runner) ConfigGetAllFromFile(ctx context.Context, path, key string) ([]string, error) {
 	out, err := r.run(ctx, "git", "config", "--file", path, "--get-all", key)
 	if err != nil {
-		return nil
+		if isGitConfigNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("git config --file %s --get-all %s: %w", path, key, err)
 	}
 	var result []string
 	for _, line := range strings.Split(out, "\n") {
@@ -102,7 +110,7 @@ func (r Runner) ConfigGetAllFromFile(ctx context.Context, path, key string) []st
 			result = append(result, line)
 		}
 	}
-	return result
+	return result, nil
 }
 
 // ConfigSet writes a git config value globally.
@@ -124,4 +132,17 @@ func (r Runner) run(ctx context.Context, name string, args ...string) (string, e
 		return "", errors.New(msg)
 	}
 	return result.Stdout, nil
+}
+
+func isGitConfigNotFound(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "exit status 1")
+}
+
+// ConfigListFromFile lists entries in a gitconfig-format file.
+func (r Runner) ConfigListFromFile(ctx context.Context, path string) (string, error) {
+	out, err := r.run(ctx, "git", "config", "--file", path, "--list")
+	if err != nil {
+		return "", fmt.Errorf("git config --file %s --list: %w", path, err)
+	}
+	return strings.TrimSpace(out), nil
 }
