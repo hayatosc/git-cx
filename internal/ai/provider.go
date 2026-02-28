@@ -33,10 +33,16 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 		return NewGeminiProvider(cfg, execx.DefaultRunner{}), nil
 	case "copilot":
 		return NewCopilotProvider(cfg, execx.DefaultRunner{}), nil
+	case "claude":
+		return NewClaudeProvider(cfg, execx.DefaultRunner{}), nil
+	case "codex":
+		return NewCodexProvider(cfg, execx.DefaultRunner{}), nil
+	case "api":
+		return NewAPIProvider(cfg)
 	case "custom":
 		return NewCustomProvider(cfg, execx.DefaultRunner{}), nil
 	default:
-		return nil, fmt.Errorf("unknown provider: %q (set cx.provider to gemini, copilot, or custom)", cfg.Provider)
+		return nil, fmt.Errorf("unknown provider: %q (set cx.provider to gemini, copilot, claude, codex, api, or custom)", cfg.Provider)
 	}
 }
 

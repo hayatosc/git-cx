@@ -13,7 +13,13 @@ type tomlConfig struct {
 	Candidates *int        `toml:"candidates"`
 	Timeout    *int        `toml:"timeout"`
 	Command    *string     `toml:"command"`
+	API        *tomlAPI    `toml:"api"`
 	Commit     *tomlCommit `toml:"commit"`
+}
+
+type tomlAPI struct {
+	BaseURL *string `toml:"base_url"`
+	Key     *string `toml:"key"`
 }
 
 type tomlCommit struct {
@@ -51,6 +57,14 @@ func ApplyTOML(cfg *Config, path string) error {
 	}
 	if tc.Command != nil {
 		cfg.Command = *tc.Command
+	}
+	if tc.API != nil {
+		if tc.API.BaseURL != nil {
+			cfg.API.BaseURL = *tc.API.BaseURL
+		}
+		if tc.API.Key != nil {
+			cfg.API.Key = *tc.API.Key
+		}
 	}
 	if tc.Commit != nil {
 		if tc.Commit.UseEmoji != nil {

@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -16,7 +17,14 @@ type Config struct {
 	Candidates int
 	Timeout    int
 	Command    string // for custom provider: supports {prompt} placeholder
+	API        APIConfig
 	Commit     CommitConfig
+}
+
+// APIConfig holds API provider settings.
+type APIConfig struct {
+	BaseURL string
+	Key     string
 }
 
 // CommitConfig holds commit message formatting settings.
@@ -69,6 +77,17 @@ func loadBase(ctx context.Context, runner git.Runner) *Config {
 	if v := runner.ConfigGet(ctx, "cx.command"); v != "" {
 		cfg.Command = v
 	}
+	if v := runner.ConfigGet(ctx, "cx.api.baseUrl"); v != "" {
+		cfg.API.BaseURL = v
+	}
+	if v := runner.ConfigGet(ctx, "cx.api.key"); v != "" {
+		cfg.API.Key = v
+	}
+	if cfg.API.Key == "" {
+		if v := strings.TrimSpace(os.Getenv("OPENAI_API_KEY")); v != "" {
+			cfg.API.Key = v
+		}
+	}
 
 	// Commit formatting
 	if v := runner.ConfigGet(ctx, "cx.commit.useEmoji"); v != "" {
@@ -89,9 +108,9 @@ func loadBase(ctx context.Context, runner git.Runner) *Config {
 // Validate checks config values for consistency.
 func (c *Config) Validate() error {
 	switch c.Provider {
-	case "gemini", "copilot", "custom":
+	case "gemini", "copilot", "claude", "codex", "api", "custom":
 	default:
-		return fmt.Errorf("unknown provider: %q (valid providers: gemini, copilot, custom; set via 'git config cx.provider PROVIDER')", c.Provider)
+		return fmt.Errorf("unknown provider: %q (valid providers: gemini, copilot, claude, codex, api, custom; set via 'git config cx.provider PROVIDER')", c.Provider)
 	}
 	if c.Candidates <= 0 {
 		return fmt.Errorf("candidates must be greater than 0")
@@ -101,6 +120,14 @@ func (c *Config) Validate() error {
 	}
 	if c.Provider == "custom" && strings.TrimSpace(c.Command) == "" {
 		return fmt.Errorf("cx.command is not set (required for custom provider)")
+	}
+	if c.Provider == "api" {
+		if strings.TrimSpace(c.API.BaseURL) == "" {
+			return fmt.Errorf("cx.api.baseUrl is not set (required for api provider)")
+		}
+		if strings.TrimSpace(c.Model) == "" {
+			return fmt.Errorf("cx.model is not set (required for api provider)")
+		}
 	}
 	if c.Commit.MaxSubjectLength < 0 {
 		return fmt.Errorf("commit.maxSubjectLength must be >= 0")
