@@ -74,7 +74,7 @@ func (r Runner) ConfigGetFromFile(ctx context.Context, path, key string) (string
 		if isGitConfigNotFound(err) {
 			return "", nil
 		}
-		return "", fmt.Errorf("git config --file %s --get %s: %w", path, key, err)
+		return "", fmt.Errorf("git config --file %q --get %s: %w", path, key, err)
 	}
 	return strings.TrimSpace(out), nil
 }
