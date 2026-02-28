@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"git-cx/internal/ai"
+	"git-cx/internal/app"
 	"git-cx/internal/config"
 	"git-cx/internal/git"
 	"git-cx/internal/tui"
@@ -33,9 +35,21 @@ func main() {
 }
 
 func runCommit(_ *cobra.Command, _ []string) error {
-	cfg := config.Load()
+	ctx := context.Background()
+	gitRunner := git.NewRunner()
 
-	diff, err := git.StagedDiff()
+	cfg, err := config.Load(ctx, gitRunner)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	provider, err := ai.NewProvider(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to initialize AI provider: %w", err)
+	}
+
+	commitService := app.NewCommitService(cfg, provider, gitRunner)
+	diff, stat, err := commitService.StagedChanges(ctx)
 	if err != nil {
 		if errors.Is(err, git.ErrNoStagedChanges) {
 			fmt.Fprintln(os.Stderr, "Error: no staged changes. Run 'git add' first.")
@@ -44,14 +58,7 @@ func runCommit(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to get staged diff: %w", err)
 	}
 
-	stat, _ := git.StagedStat()
-
-	provider, err := ai.NewProvider(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to initialize AI provider: %w", err)
-	}
-
-	m := tui.New(cfg, provider, diff, stat)
+	m := tui.New(commitService, diff, stat)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("TUI error: %w", err)
@@ -84,7 +91,11 @@ Example:
   git config --global cx.timeout 30
 `,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			cfg := config.Load()
+			ctx := context.Background()
+			cfg, err := config.Load(ctx, git.NewRunner())
+			if err != nil {
+				return err
+			}
 			fmt.Printf("provider:                  %s\n", cfg.Provider)
 			fmt.Printf("model:                     %s\n", cfg.Model)
 			fmt.Printf("candidates:                %d\n", cfg.Candidates)

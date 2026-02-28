@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"git-cx/internal/config"
+	"git-cx/internal/execx"
 )
 
 // CustomProvider runs an arbitrary shell command with a {prompt} placeholder.
@@ -12,14 +13,16 @@ type CustomProvider struct {
 	command    string
 	candidates int
 	timeout    int
+	runner     execx.Runner
 }
 
 // NewCustomProvider creates a CustomProvider from config.
-func NewCustomProvider(cfg *config.Config) *CustomProvider {
+func NewCustomProvider(cfg *config.Config, runner execx.Runner) *CustomProvider {
 	return &CustomProvider{
 		command:    cfg.Command,
 		candidates: cfg.Candidates,
 		timeout:    cfg.Timeout,
+		runner:     runner,
 	}
 }
 
@@ -28,5 +31,5 @@ func (p *CustomProvider) Name() string { return "custom" }
 func (p *CustomProvider) Generate(ctx context.Context, req GenerateRequest) ([]string, error) {
 	prompt := buildPrompt(req)
 	cmdStr := strings.ReplaceAll(p.command, "{prompt}", prompt)
-	return runShell(ctx, cmdStr, p.timeout, p.candidates)
+	return runShell(ctx, p.runner, cmdStr, p.timeout, p.candidates)
 }

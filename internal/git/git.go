@@ -1,19 +1,35 @@
 package git
 
 import (
-	"bytes"
+	"context"
 	"errors"
 	"fmt"
-	"os/exec"
 	"strings"
+
+	"git-cx/internal/execx"
 )
 
 // ErrNoStagedChanges is returned when there are no staged changes.
 var ErrNoStagedChanges = errors.New("no staged changes: please run 'git add' first")
 
+// Runner executes git commands.
+type Runner struct {
+	runner execx.Runner
+}
+
+// NewRunner creates a Runner with the default executor.
+func NewRunner() Runner {
+	return Runner{runner: execx.DefaultRunner{}}
+}
+
+// NewRunnerWithExecutor creates a Runner with a custom executor.
+func NewRunnerWithExecutor(r execx.Runner) Runner {
+	return Runner{runner: r}
+}
+
 // StagedDiff returns the staged diff output.
-func StagedDiff() (string, error) {
-	out, err := run("git", "diff", "--cached", "--no-color")
+func (r Runner) StagedDiff(ctx context.Context) (string, error) {
+	out, err := r.run(ctx, "git", "diff", "--cached", "--no-color")
 	if err != nil {
 		return "", fmt.Errorf("git diff: %w", err)
 	}
@@ -24,8 +40,8 @@ func StagedDiff() (string, error) {
 }
 
 // StagedStat returns the --stat output of the staged diff.
-func StagedStat() (string, error) {
-	out, err := run("git", "diff", "--cached", "--stat", "--no-color")
+func (r Runner) StagedStat(ctx context.Context) (string, error) {
+	out, err := r.run(ctx, "git", "diff", "--cached", "--stat", "--no-color")
 	if err != nil {
 		return "", fmt.Errorf("git diff --stat: %w", err)
 	}
@@ -33,8 +49,8 @@ func StagedStat() (string, error) {
 }
 
 // Commit executes `git commit -m <message>`.
-func Commit(message string) error {
-	_, err := run("git", "commit", "-m", message)
+func (r Runner) Commit(ctx context.Context, message string) error {
+	_, err := r.run(ctx, "git", "commit", "-m", message)
 	if err != nil {
 		return fmt.Errorf("git commit: %w", err)
 	}
@@ -42,8 +58,8 @@ func Commit(message string) error {
 }
 
 // ConfigGet reads a git config value. Returns "" if not set.
-func ConfigGet(key string) string {
-	out, err := run("git", "config", "--get", key)
+func (r Runner) ConfigGet(ctx context.Context, key string) string {
+	out, err := r.run(ctx, "git", "config", "--get", key)
 	if err != nil {
 		return ""
 	}
@@ -51,8 +67,8 @@ func ConfigGet(key string) string {
 }
 
 // ConfigGetAll reads multiple values for a key (e.g. repeated keys).
-func ConfigGetAll(key string) []string {
-	out, err := run("git", "config", "--get-all", key)
+func (r Runner) ConfigGetAll(ctx context.Context, key string) []string {
+	out, err := r.run(ctx, "git", "config", "--get-all", key)
 	if err != nil {
 		return nil
 	}
@@ -66,23 +82,19 @@ func ConfigGetAll(key string) []string {
 }
 
 // ConfigSet writes a git config value globally.
-func ConfigSet(key, value string) error {
-	_, err := run("git", "config", "--global", key, value)
+func (r Runner) ConfigSet(ctx context.Context, key, value string) error {
+	_, err := r.run(ctx, "git", "config", "--global", key, value)
 	return err
 }
 
-// run executes a command and returns combined stdout/stderr.
-func run(name string, args ...string) (string, error) {
-	cmd := exec.Command(name, args...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+func (r Runner) run(ctx context.Context, name string, args ...string) (string, error) {
+	result, err := r.runner.Run(ctx, name, args...)
+	if err != nil {
+		msg := strings.TrimSpace(result.Stderr)
 		if msg == "" {
 			msg = err.Error()
 		}
 		return "", errors.New(msg)
 	}
-	return stdout.String(), nil
+	return result.Stdout, nil
 }
