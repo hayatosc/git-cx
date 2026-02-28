@@ -1,9 +1,0 @@
-provider   = "copilot"
-# model    = "gpt-4o"   # omit to use GitHub Copilot's default model
-candidates = 3
-timeout    = 30
-
-[commit]
-use_emoji         = false
-max_subject_length = 100
-# scopes = ["feat", "fix", "docs", "refactor"]

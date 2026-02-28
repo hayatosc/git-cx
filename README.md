@@ -35,7 +35,7 @@ $ ./output/git-cx
 
 ## Configuration
 
-Configure via `git config` or TOML. All options can be overridden by flags per invocation.
+Configure via `git config` or a gitconfig-format file (`--config`). All options can be overridden by flags per invocation.
 
 ### git config
 
@@ -63,11 +63,11 @@ $ git config --global cx.commit.scopes feat
   scopes = feat
 ```
 
-### TOML
+### Config file (`--config`)
 
 ``` console
-$ git cx --config examples/gemini.toml
-$ git cx --config examples/copilot.toml
+$ git cx --config examples/gemini.gitconfig
+$ git cx --config examples/copilot.gitconfig
 ```
 
 ### Flags

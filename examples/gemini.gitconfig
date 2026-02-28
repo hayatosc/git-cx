@@ -1,0 +1,11 @@
+[cx]
+  provider = gemini
+  model = gemini-2.0-flash
+  candidates = 3
+  timeout = 30
+[cx "commit"]
+  useEmoji = false
+  maxSubjectLength = 100
+  # scopes = feat
+  # scopes = fix
+  # scopes = docs
