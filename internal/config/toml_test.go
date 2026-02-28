@@ -57,3 +57,29 @@ maxSubjectLength = 88
 		t.Fatalf("expected MaxSubjectLength=88, got %d", cfg.Commit.MaxSubjectLength)
 	}
 }
+
+func TestApplyTOML_CommitPrefersSnakeCaseWhenBothExist(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	if err := os.WriteFile(path, []byte(`
+[commit]
+use_emoji = false
+useEmoji = true
+max_subject_length = 77
+maxSubjectLength = 99
+`), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	cfg := DefaultConfig()
+	if err := ApplyTOML(cfg, path); err != nil {
+		t.Fatalf("ApplyTOML error: %v", err)
+	}
+
+	if cfg.Commit.UseEmoji {
+		t.Fatalf("expected UseEmoji=false, got true")
+	}
+	if cfg.Commit.MaxSubjectLength != 77 {
+		t.Fatalf("expected MaxSubjectLength=77, got %d", cfg.Commit.MaxSubjectLength)
+	}
+}

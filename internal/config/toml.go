@@ -55,6 +55,7 @@ func ApplyTOML(cfg *Config, path string) error {
 		cfg.Command = *tc.Command
 	}
 	if tc.Commit != nil {
+		// Prefer TOML snake_case keys when both styles are present.
 		if tc.Commit.UseEmoji != nil {
 			cfg.Commit.UseEmoji = *tc.Commit.UseEmoji
 		} else if tc.Commit.UseEmojiCamel != nil {
