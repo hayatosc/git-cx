@@ -1,12 +1,16 @@
 package execx
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // MockRunner is a test double for executing commands.
 type MockRunner struct {
 	Results map[string]Result
 	Errors  map[string]error
 	Calls   []Call
+	Strict  bool
 }
 
 // Call records a command invocation.
@@ -25,6 +29,9 @@ func (m *MockRunner) Run(ctx context.Context, name string, args ...string) (Resu
 	}
 	if res, ok := m.Results[key]; ok {
 		return res, nil
+	}
+	if m.Strict {
+		return Result{}, fmt.Errorf("execx: unstubbed call: %s %q", name, args)
 	}
 	return Result{}, nil
 }

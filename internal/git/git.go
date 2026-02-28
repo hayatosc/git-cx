@@ -84,7 +84,10 @@ func (r Runner) ConfigGetAll(ctx context.Context, key string) []string {
 // ConfigSet writes a git config value globally.
 func (r Runner) ConfigSet(ctx context.Context, key, value string) error {
 	_, err := r.run(ctx, "git", "config", "--global", key, value)
-	return err
+	if err != nil {
+		return fmt.Errorf("git config --global: %w", err)
+	}
+	return nil
 }
 
 func (r Runner) run(ctx context.Context, name string, args ...string) (string, error) {

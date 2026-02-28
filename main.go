@@ -45,31 +45,63 @@ func main() {
 
 func loadConfig(cmd *cobra.Command, runner git.Runner) (*config.Config, error) {
 	ctx := context.Background()
-	path := mustGetString(cmd, "config")
+	flags := cmd.Flags()
+	path, err := flags.GetString("config")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config flag: %w", err)
+	}
 	cfg, err := config.LoadWithFile(ctx, runner, path)
 	if err != nil {
 		return nil, err
 	}
-	if cmd.Flags().Changed("provider") {
-		cfg.Provider = mustGetString(cmd, "provider")
+	if flags.Changed("provider") {
+		v, err := flags.GetString("provider")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read provider flag: %w", err)
+		}
+		cfg.Provider = v
 	}
-	if cmd.Flags().Changed("model") {
-		cfg.Model = mustGetString(cmd, "model")
+	if flags.Changed("model") {
+		v, err := flags.GetString("model")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read model flag: %w", err)
+		}
+		cfg.Model = v
 	}
-	if cmd.Flags().Changed("candidates") {
-		cfg.Candidates = mustGetInt(cmd, "candidates")
+	if flags.Changed("candidates") {
+		v, err := flags.GetInt("candidates")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read candidates flag: %w", err)
+		}
+		cfg.Candidates = v
 	}
-	if cmd.Flags().Changed("timeout") {
-		cfg.Timeout = mustGetInt(cmd, "timeout")
+	if flags.Changed("timeout") {
+		v, err := flags.GetInt("timeout")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read timeout flag: %w", err)
+		}
+		cfg.Timeout = v
 	}
-	if cmd.Flags().Changed("command") {
-		cfg.Command = mustGetString(cmd, "command")
+	if flags.Changed("command") {
+		v, err := flags.GetString("command")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read command flag: %w", err)
+		}
+		cfg.Command = v
 	}
-	if cmd.Flags().Changed("use-emoji") {
-		cfg.Commit.UseEmoji = mustGetBool(cmd, "use-emoji")
+	if flags.Changed("use-emoji") {
+		v, err := flags.GetBool("use-emoji")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read use-emoji flag: %w", err)
+		}
+		cfg.Commit.UseEmoji = v
 	}
-	if cmd.Flags().Changed("max-subject-length") {
-		cfg.Commit.MaxSubjectLength = mustGetInt(cmd, "max-subject-length")
+	if flags.Changed("max-subject-length") {
+		v, err := flags.GetInt("max-subject-length")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read max-subject-length flag: %w", err)
+		}
+		cfg.Commit.MaxSubjectLength = v
 	}
 	return cfg, cfg.Validate()
 }
@@ -104,30 +136,6 @@ func runCommit(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("TUI error: %w", err)
 	}
 	return nil
-}
-
-func mustGetString(cmd *cobra.Command, name string) string {
-	value, err := cmd.Flags().GetString(name)
-	if err != nil {
-		panic(fmt.Errorf("failed to read %s flag: %w", name, err))
-	}
-	return value
-}
-
-func mustGetInt(cmd *cobra.Command, name string) int {
-	value, err := cmd.Flags().GetInt(name)
-	if err != nil {
-		panic(fmt.Errorf("failed to read %s flag: %w", name, err))
-	}
-	return value
-}
-
-func mustGetBool(cmd *cobra.Command, name string) bool {
-	value, err := cmd.Flags().GetBool(name)
-	if err != nil {
-		panic(fmt.Errorf("failed to read %s flag: %w", name, err))
-	}
-	return value
 }
 
 func newVersionCmd() *cobra.Command {

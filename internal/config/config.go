@@ -91,7 +91,7 @@ func (c *Config) Validate() error {
 	switch c.Provider {
 	case "gemini", "copilot", "custom":
 	default:
-		return fmt.Errorf("unknown provider: %q", c.Provider)
+		return fmt.Errorf("unknown provider: %q (valid providers: gemini, copilot, custom; set via 'git config cx.provider PROVIDER')", c.Provider)
 	}
 	if c.Candidates <= 0 {
 		return fmt.Errorf("candidates must be greater than 0")
