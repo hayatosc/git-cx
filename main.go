@@ -25,6 +25,13 @@ func main() {
 	}
 
 	root.PersistentFlags().String("config", "", "path to TOML config file")
+	root.PersistentFlags().String("provider", "", "AI provider (gemini, copilot, custom)")
+	root.PersistentFlags().String("model", "", "model name passed to the provider")
+	root.PersistentFlags().Int("candidates", 0, "number of commit message candidates")
+	root.PersistentFlags().Int("timeout", 0, "request timeout in seconds")
+	root.PersistentFlags().String("command", "", "command template for custom provider")
+	root.PersistentFlags().Bool("use-emoji", false, "prefix commit type with emoji")
+	root.PersistentFlags().Int("max-subject-length", 0, "max length of commit subject line")
 
 	root.AddCommand(newConfigCmd())
 	root.AddCommand(newVersionCmd())
@@ -39,7 +46,39 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config flag: %w", err)
 	}
-	return config.LoadWithFile(path)
+	cfg, err := config.LoadWithFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if cmd.Flags().Changed("provider") {
+		v, _ := cmd.Flags().GetString("provider")
+		cfg.Provider = v
+	}
+	if cmd.Flags().Changed("model") {
+		v, _ := cmd.Flags().GetString("model")
+		cfg.Model = v
+	}
+	if cmd.Flags().Changed("candidates") {
+		v, _ := cmd.Flags().GetInt("candidates")
+		cfg.Candidates = v
+	}
+	if cmd.Flags().Changed("timeout") {
+		v, _ := cmd.Flags().GetInt("timeout")
+		cfg.Timeout = v
+	}
+	if cmd.Flags().Changed("command") {
+		v, _ := cmd.Flags().GetString("command")
+		cfg.Command = v
+	}
+	if cmd.Flags().Changed("use-emoji") {
+		v, _ := cmd.Flags().GetBool("use-emoji")
+		cfg.Commit.UseEmoji = v
+	}
+	if cmd.Flags().Changed("max-subject-length") {
+		v, _ := cmd.Flags().GetInt("max-subject-length")
+		cfg.Commit.MaxSubjectLength = v
+	}
+	return cfg, nil
 }
 
 func runCommit(cmd *cobra.Command, _ []string) error {
