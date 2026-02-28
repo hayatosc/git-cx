@@ -32,6 +32,26 @@ func TestCommitService_GenerateCandidates(t *testing.T) {
 	}
 }
 
+func TestCommitService_GenerateDetails(t *testing.T) {
+	provider := &ai.MockProvider{Body: "body", Footer: "footer"}
+	service := NewCommitService(
+		&config.Config{Candidates: 1, Commit: config.CommitConfig{}},
+		provider,
+		git.NewRunnerWithExecutor(&execx.MockRunner{}),
+	)
+
+	body, footer, err := service.GenerateDetails(context.Background(), "diff", "stat", "feat", "core", "add")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if body != "body" || footer != "footer" {
+		t.Fatalf("unexpected result: %q %q", body, footer)
+	}
+	if provider.LastDetail == nil || provider.LastDetail.Subject != "add" {
+		t.Fatalf("detail request not recorded: %#v", provider.LastDetail)
+	}
+}
+
 func TestCommitService_CommitEmptyMessage(t *testing.T) {
 	service := NewCommitService(
 		&config.Config{Candidates: 1, Commit: config.CommitConfig{}},

@@ -35,3 +35,17 @@ func (p *GeminiProvider) Generate(ctx context.Context, req GenerateRequest) ([]s
 	}
 	return runCLI(ctx, p.runner, "gemini", args, p.timeout, p.candidates)
 }
+
+func (p *GeminiProvider) GenerateDetail(ctx context.Context, req GenerateRequest) (string, string, error) {
+	prompt := buildDetailPrompt(req)
+	args := []string{"-p", prompt}
+	if p.model != "" {
+		args = append(args, "-m", p.model)
+	}
+	output, err := runCLIOutput(ctx, p.runner, "gemini", args, p.timeout)
+	if err != nil {
+		return "", "", err
+	}
+	body, footer := parseDetailOutput(output)
+	return body, footer, nil
+}

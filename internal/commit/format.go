@@ -55,11 +55,24 @@ func BuildMessage(c *ConventionalCommit, useEmoji bool, maxSubjectLen int) strin
 		}
 		return result
 	}
+	if c.Type == "" {
+		result := c.Subject
+		if c.Body != "" {
+			result += "\n\n" + c.Body
+		}
+		if c.Footer != "" {
+			result += "\n\n" + c.Footer
+		}
+		return result
+	}
 	return Format(c, useEmoji, maxSubjectLen)
 }
 
 func isConventionalHeader(s string) bool {
 	for _, t := range CommitTypes {
+		if t == "auto" {
+			continue
+		}
 		if len(s) > len(t) && s[:len(t)] == t {
 			rest := s[len(t):]
 			if len(rest) > 0 && (rest[0] == '(' || rest[0] == ':' || rest[0] == '!') {

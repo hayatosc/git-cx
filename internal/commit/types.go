@@ -12,6 +12,7 @@ type ConventionalCommit struct {
 
 // CommitTypes is the ordered list of supported commit types.
 var CommitTypes = []string{
+	"auto",
 	"feat",
 	"fix",
 	"docs",
@@ -27,6 +28,7 @@ var CommitTypes = []string{
 
 // CommitTypeDescriptions maps each type to a short description.
 var CommitTypeDescriptions = map[string]string{
+	"auto":     "AI selects type and header",
 	"feat":     "A new feature",
 	"fix":      "A bug fix",
 	"docs":     "Documentation only changes",

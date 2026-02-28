@@ -33,3 +33,14 @@ func (p *CustomProvider) Generate(ctx context.Context, req GenerateRequest) ([]s
 	cmdStr := strings.ReplaceAll(p.command, "{prompt}", prompt)
 	return runShell(ctx, p.runner, cmdStr, p.timeout, p.candidates)
 }
+
+func (p *CustomProvider) GenerateDetail(ctx context.Context, req GenerateRequest) (string, string, error) {
+	prompt := buildDetailPrompt(req)
+	cmdStr := strings.ReplaceAll(p.command, "{prompt}", prompt)
+	output, err := runShellOutput(ctx, p.runner, cmdStr, p.timeout)
+	if err != nil {
+		return "", "", err
+	}
+	body, footer := parseDetailOutput(output)
+	return body, footer, nil
+}
