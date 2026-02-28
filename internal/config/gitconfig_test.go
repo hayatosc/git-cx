@@ -12,14 +12,7 @@ import (
 func TestLoadWithFile_GitConfigFormatOverrides(t *testing.T) {
 	mock := &execx.MockRunner{
 		Results: map[string]execx.Result{
-			"git\x00config\x00--file\x00/tmp/cx.conf\x00--list":                              {Stdout: "cx.provider=copilot\n"},
-			"git\x00config\x00--file\x00/tmp/cx.conf\x00--get\x00cx.provider":                {Stdout: "copilot\n"},
-			"git\x00config\x00--file\x00/tmp/cx.conf\x00--get\x00cx.model":                   {Stdout: "gpt-4o\n"},
-			"git\x00config\x00--file\x00/tmp/cx.conf\x00--get\x00cx.candidates":              {Stdout: "5\n"},
-			"git\x00config\x00--file\x00/tmp/cx.conf\x00--get\x00cx.timeout":                 {Stdout: "45\n"},
-			"git\x00config\x00--file\x00/tmp/cx.conf\x00--get\x00cx.commit.useEmoji":         {Stdout: "yes\n"},
-			"git\x00config\x00--file\x00/tmp/cx.conf\x00--get\x00cx.commit.maxSubjectLength": {Stdout: "80\n"},
-			"git\x00config\x00--file\x00/tmp/cx.conf\x00--get-all\x00cx.commit.scopes":       {Stdout: "core\ncli\n"},
+			"git\x00config\x00--file\x00/tmp/cx.conf\x00--list": {Stdout: "cx.provider=copilot\ncx.model=gpt-4o\ncx.candidates=5\ncx.timeout=45\ncx.commit.useEmoji=yes\ncx.commit.maxSubjectLength=80\ncx.commit.scopes=core\ncx.commit.scopes=cli\n"},
 		},
 	}
 
@@ -39,6 +32,32 @@ func TestLoadWithFile_GitConfigFormatOverrides(t *testing.T) {
 	}
 	if len(cfg.Commit.Scopes) != 2 || cfg.Commit.Scopes[0] != "core" || cfg.Commit.Scopes[1] != "cli" {
 		t.Fatalf("unexpected scopes: %#v", cfg.Commit.Scopes)
+	}
+}
+
+func TestLoadWithFile_InvalidIntValue(t *testing.T) {
+	mock := &execx.MockRunner{
+		Results: map[string]execx.Result{
+			"git\x00config\x00--file\x00/tmp/cx.conf\x00--list": {Stdout: "cx.candidates=abc\n"},
+		},
+	}
+
+	_, err := LoadWithFile(context.Background(), git.NewRunnerWithExecutor(mock), "/tmp/cx.conf")
+	if err == nil {
+		t.Fatalf("expected error for invalid candidates")
+	}
+}
+
+func TestLoadWithFile_InvalidBoolValue(t *testing.T) {
+	mock := &execx.MockRunner{
+		Results: map[string]execx.Result{
+			"git\x00config\x00--file\x00/tmp/cx.conf\x00--list": {Stdout: "cx.commit.useEmoji=maybe\n"},
+		},
+	}
+
+	_, err := LoadWithFile(context.Background(), git.NewRunnerWithExecutor(mock), "/tmp/cx.conf")
+	if err == nil {
+		t.Fatalf("expected error for invalid useEmoji")
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"git-cx/internal/git"
 )
@@ -44,28 +45,36 @@ func ApplyGitConfigFile(ctx context.Context, runner git.Runner, cfg *Config, pat
 		cfg.Model = v
 	}
 	if v := getFirstConfigValue(entries, "cx.candidates"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			cfg.Candidates = n
+		n, err := parseIntConfig("cx.candidates", v)
+		if err != nil {
+			return err
 		}
+		cfg.Candidates = n
 	}
 	if v := getFirstConfigValue(entries, "cx.timeout"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			cfg.Timeout = n
+		n, err := parseIntConfig("cx.timeout", v)
+		if err != nil {
+			return err
 		}
+		cfg.Timeout = n
 	}
 	if v := getFirstConfigValue(entries, "cx.command"); v != "" {
 		cfg.Command = v
 	}
 
 	if v := getFirstConfigValue(entries, "cx.commit.useEmoji"); v != "" {
-		if b, ok := parseGitBool(v); ok {
-			cfg.Commit.UseEmoji = b
+		b, err := parseBoolConfig("cx.commit.useEmoji", v)
+		if err != nil {
+			return err
 		}
+		cfg.Commit.UseEmoji = b
 	}
 	if v := getFirstConfigValue(entries, "cx.commit.maxSubjectLength"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			cfg.Commit.MaxSubjectLength = n
+		n, err := parseIntConfig("cx.commit.maxSubjectLength", v)
+		if err != nil {
+			return err
 		}
+		cfg.Commit.MaxSubjectLength = n
 	}
 	if scopes := getAllConfigValues(entries, "cx.commit.scopes"); len(scopes) > 0 {
 		cfg.Commit.Scopes = scopes
@@ -79,4 +88,22 @@ func assertReadableGitConfigFile(ctx context.Context, runner git.Runner, path st
 		return fmt.Errorf("read git config file %q: %w", path, err)
 	}
 	return nil
+}
+
+func parseIntConfig(key, value string) (int, error) {
+	trimmed := strings.TrimSpace(value)
+	n, err := strconv.Atoi(trimmed)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s %q: %w", key, trimmed, err)
+	}
+	return n, nil
+}
+
+func parseBoolConfig(key, value string) (bool, error) {
+	trimmed := strings.TrimSpace(value)
+	b, ok := parseGitBool(trimmed)
+	if !ok {
+		return false, fmt.Errorf("invalid %s %q: expected true/false/on/off/yes/no", key, trimmed)
+	}
+	return b, nil
 }

@@ -129,20 +129,50 @@ func (r Runner) run(ctx context.Context, name string, args ...string) (string, e
 		if msg == "" {
 			msg = err.Error()
 		}
-		return "", errors.New(msg)
+		if msg == err.Error() {
+			return "", err
+		}
+		return "", fmt.Errorf("%s: %w", msg, err)
 	}
 	return result.Stdout, nil
 }
 
 func isGitConfigNotFound(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "exit status 1")
+	if err == nil {
+		return false
+	}
+	var exitCoder interface{ ExitCode() int }
+	if errors.As(err, &exitCoder) {
+		return exitCoder.ExitCode() == 1
+	}
+	return false
 }
 
 // ConfigListFromFile lists entries in a gitconfig-format file.
-func (r Runner) ConfigListFromFile(ctx context.Context, path string) (string, error) {
+func (r Runner) ConfigListFromFile(ctx context.Context, path string) (map[string][]string, error) {
 	out, err := r.run(ctx, "git", "config", "--file", path, "--list")
 	if err != nil {
-		return "", fmt.Errorf("git config --file %s --list: %w", path, err)
+		return nil, fmt.Errorf("git config --file %s --list: %w", path, err)
 	}
-	return strings.TrimSpace(out), nil
+	entries := make(map[string][]string)
+	for _, rawLine := range strings.Split(out, "\n") {
+		line := strings.TrimSuffix(rawLine, "\r")
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		key := line
+		value := ""
+		if idx := strings.Index(line, "="); idx >= 0 {
+			key = line[:idx]
+			value = line[idx+1:]
+		}
+		if key == "" {
+			continue
+		}
+		entries[key] = append(entries[key], value)
+	}
+	if len(entries) == 0 {
+		return nil, nil
+	}
+	return entries, nil
 }
