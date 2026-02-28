@@ -38,7 +38,7 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 	case "codex":
 		return NewCodexProvider(cfg, execx.DefaultRunner{}), nil
 	case "api":
-		return NewAPIProvider(cfg)
+		return NewAPIProvider(cfg), nil
 	case "custom":
 		return NewCustomProvider(cfg, execx.DefaultRunner{}), nil
 	default:

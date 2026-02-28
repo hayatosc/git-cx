@@ -61,10 +61,7 @@ func TestAPIProviderGenerate_SendsRequestAndParsesResponse(t *testing.T) {
 			Key:     "test-key",
 		},
 	}
-	provider, err := NewAPIProvider(cfg)
-	if err != nil {
-		t.Fatalf("failed to create provider: %v", err)
-	}
+	provider := NewAPIProvider(cfg)
 
 	got, err := provider.Generate(context.Background(), GenerateRequest{Diff: "diff", Candidates: 2})
 	if err != nil {
@@ -107,12 +104,9 @@ func TestAPIProviderGenerate_ReturnsErrorMessage(t *testing.T) {
 			Key:     "test-key",
 		},
 	}
-	provider, err := NewAPIProvider(cfg)
-	if err != nil {
-		t.Fatalf("failed to create provider: %v", err)
-	}
+	provider := NewAPIProvider(cfg)
 
-	_, err = provider.Generate(context.Background(), GenerateRequest{Diff: "diff", Candidates: 1})
+	_, err := provider.Generate(context.Background(), GenerateRequest{Diff: "diff", Candidates: 1})
 	if err == nil || !strings.Contains(err.Error(), "invalid key") {
 		t.Fatalf("unexpected error: %v", err)
 	}

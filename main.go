@@ -178,8 +178,8 @@ Example:
 	  git config --global cx.model gemini-3.0-flash
 	  git config --global cx.candidates 3
 	  git config --global cx.timeout 30
-	  git config --global cx.api.baseUrl https://api.openai.com/v1
-	  git config --global cx.api.key YOUR_API_KEY
+	  git config --global cx.apiBaseUrl https://api.openai.com/v1
+	  git config --global cx.apiKey YOUR_API_KEY
 `,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg, err := loadConfig(cmd, git.NewRunner())
@@ -194,13 +194,13 @@ Example:
 				fmt.Printf("command:                   %s\n", cfg.Command)
 			}
 			if strings.TrimSpace(cfg.API.BaseURL) != "" {
-				fmt.Printf("api.baseUrl:               %s\n", cfg.API.BaseURL)
+				fmt.Printf("apiBaseUrl:                %s\n", cfg.API.BaseURL)
 			}
 			keyStatus := "<not set>"
 			if strings.TrimSpace(cfg.API.Key) != "" {
 				keyStatus = "<set>"
 			}
-			fmt.Printf("api.key:                   %s\n", keyStatus)
+			fmt.Printf("apiKey:                    %s\n", keyStatus)
 			fmt.Printf("commit.useEmoji:           %v\n", cfg.Commit.UseEmoji)
 			fmt.Printf("commit.maxSubjectLength:   %d\n", cfg.Commit.MaxSubjectLength)
 			if len(cfg.Commit.Scopes) > 0 {

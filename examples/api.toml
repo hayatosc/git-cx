@@ -3,9 +3,8 @@ model      = "gpt-5"
 candidates = 3
 timeout    = 30
 
-[api]
-base_url = "https://api.openai.com/v1"
-# key     = "YOUR_API_KEY"
+api_base_url = "https://api.openai.com/v1"
+# api_key     = "YOUR_API_KEY"
 
 [commit]
 use_emoji          = false

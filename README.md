@@ -44,8 +44,8 @@ $ git config --global cx.provider gemini
 $ git config --global cx.model gemini-3.0-flash
 $ git config --global cx.candidates 3
 $ git config --global cx.timeout 30
-$ git config --global cx.api.baseUrl https://api.openai.com/v1
-$ git config --global cx.api.key YOUR_API_KEY
+$ git config --global cx.apiBaseUrl https://api.openai.com/v1
+$ git config --global cx.apiKey YOUR_API_KEY
 $ git config --global cx.commit.useEmoji false
 $ git config --global cx.commit.maxSubjectLength 100
 $ git config --global cx.commit.scopes feat
@@ -59,6 +59,9 @@ $ git config --global cx.commit.scopes feat
   model = gemini-3.0-flash
   candidates = 3
   timeout = 30
+[cx]
+  apiBaseUrl = https://api.openai.com/v1
+  apiKey = YOUR_API_KEY
 [cx "api"]
   baseUrl = https://api.openai.com/v1
   key = YOUR_API_KEY
@@ -96,10 +99,10 @@ Select the provider with `cx.provider`.
 - `copilot`: uses the `copilot` CLI
 - `claude`: uses the `claude` CLI
 - `codex`: uses the `codex exec` CLI
-- `api`: uses an OpenAI-compatible API endpoint (set `cx.api.baseUrl` and `cx.api.key`)
+- `api`: uses an OpenAI-compatible API endpoint (set `cx.apiBaseUrl` and `cx.apiKey`)
 - `custom`: runs the command in `cx.command` (replaces `{prompt}`)
 
-For the `api` provider, set `cx.api.baseUrl` to your OpenAI-compatible endpoint (e.g. `https://api.openai.com/v1`, `https://openrouter.ai/api/v1`, `http://localhost:8000/v1`) and set `cx.api.key` or `OPENAI_API_KEY`.
+For the `api` provider, set `cx.apiBaseUrl` to your OpenAI-compatible endpoint (e.g. `https://api.openai.com/v1`, `https://openrouter.ai/api/v1`, `http://localhost:8000/v1`) and set `cx.apiKey` or `OPENAI_API_KEY`.
 
 ## Development
 

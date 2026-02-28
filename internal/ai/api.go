@@ -24,14 +24,14 @@ type APIProvider struct {
 }
 
 // NewAPIProvider creates an APIProvider from config.
-func NewAPIProvider(cfg *config.Config) (*APIProvider, error) {
+func NewAPIProvider(cfg *config.Config) *APIProvider {
 	return &APIProvider{
 		baseURL:    cfg.API.BaseURL,
 		apiKey:     cfg.API.Key,
 		model:      cfg.Model,
 		candidates: cfg.Candidates,
 		timeout:    cfg.Timeout,
-	}, nil
+	}
 }
 
 func (p *APIProvider) Name() string { return "api" }
@@ -60,7 +60,7 @@ type apiResponse struct {
 
 func (p *APIProvider) Generate(ctx context.Context, req GenerateRequest) ([]string, error) {
 	if strings.TrimSpace(p.baseURL) == "" {
-		return nil, fmt.Errorf("api base URL is not set (cx.api.baseUrl) for api provider")
+		return nil, fmt.Errorf("api base URL is not set (cx.apiBaseUrl) for api provider")
 	}
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(p.timeout)*time.Second)
 	defer cancel()
@@ -106,16 +106,25 @@ func (p *APIProvider) Generate(ctx context.Context, req GenerateRequest) ([]stri
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
+	if resp.StatusCode >= http.StatusBadRequest {
+		msg := strings.TrimSpace(resp.Status)
+		var decodedErr apiResponse
+		if err := json.Unmarshal(body, &decodedErr); err == nil {
+			if decodedErr.Error != nil && strings.TrimSpace(decodedErr.Error.Message) != "" {
+				msg = decodedErr.Error.Message
+			}
+			return nil, fmt.Errorf("api request failed: %s", msg)
+		}
+		raw := strings.TrimSpace(string(body))
+		const maxErrorBodyLen = 512
+		if len(raw) > maxErrorBodyLen {
+			raw = raw[:maxErrorBodyLen] + "..."
+		}
+		return nil, fmt.Errorf("api request failed: status %s, could not parse error body as JSON: %s", resp.Status, raw)
+	}
 	var decoded apiResponse
 	if err := json.Unmarshal(body, &decoded); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
-	}
-	if resp.StatusCode >= http.StatusBadRequest {
-		msg := strings.TrimSpace(resp.Status)
-		if decoded.Error != nil && strings.TrimSpace(decoded.Error.Message) != "" {
-			msg = decoded.Error.Message
-		}
-		return nil, fmt.Errorf("api request failed: %s", msg)
 	}
 
 	var candidates []string
