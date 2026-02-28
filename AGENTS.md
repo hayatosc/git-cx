@@ -8,7 +8,7 @@ git-cx is a CLI that generates Conventional Commits messages from staged diffs u
 - `internal/app`: commit flow orchestration
 - `internal/ai`: providers (gemini/copilot/custom)
 - `internal/tui`: TUI UI/state transitions
-- `internal/config`: git config/TOML configuration loading
+- `internal/config`: git config configuration loading
 - `internal/git`: git command runner
 
 ## Development Commands
