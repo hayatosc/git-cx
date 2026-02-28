@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -62,4 +63,16 @@ func Load() *Config {
 	}
 
 	return cfg
+}
+
+// LoadWithFile reads config from git config and, if path is non-empty,
+// merges the TOML file at that path on top.
+func LoadWithFile(path string) (*Config, error) {
+	cfg := Load()
+	if path != "" {
+		if err := ApplyTOML(cfg, path); err != nil {
+			return nil, fmt.Errorf("failed to load config file %q: %w", path, err)
+		}
+	}
+	return cfg, nil
 }

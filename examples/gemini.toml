@@ -1,0 +1,9 @@
+provider   = "gemini"
+model      = "gemini-2.0-flash"
+candidates = 3
+timeout    = 30
+
+[commit]
+use_emoji         = false
+max_subject_length = 100
+# scopes = ["feat", "fix", "docs", "refactor"]

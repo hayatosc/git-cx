@@ -24,6 +24,8 @@ func main() {
 		RunE:  runCommit,
 	}
 
+	root.PersistentFlags().String("config", "", "path to TOML config file")
+
 	root.AddCommand(newConfigCmd())
 	root.AddCommand(newVersionCmd())
 
@@ -32,8 +34,19 @@ func main() {
 	}
 }
 
-func runCommit(_ *cobra.Command, _ []string) error {
-	cfg := config.Load()
+func loadConfig(cmd *cobra.Command) (*config.Config, error) {
+	path, err := cmd.Flags().GetString("config")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config flag: %w", err)
+	}
+	return config.LoadWithFile(path)
+}
+
+func runCommit(cmd *cobra.Command, _ []string) error {
+	cfg, err := loadConfig(cmd)
+	if err != nil {
+		return err
+	}
 
 	diff, err := git.StagedDiff()
 	if err != nil {
@@ -83,8 +96,11 @@ Example:
   git config --global cx.candidates 3
   git config --global cx.timeout 30
 `,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			cfg := config.Load()
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cfg, err := loadConfig(cmd)
+			if err != nil {
+				return err
+			}
 			fmt.Printf("provider:                  %s\n", cfg.Provider)
 			fmt.Printf("model:                     %s\n", cfg.Model)
 			fmt.Printf("candidates:                %d\n", cfg.Candidates)
