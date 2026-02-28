@@ -36,13 +36,11 @@ func Load(ctx context.Context, runner git.Runner) (*Config, error) {
 }
 
 // LoadWithFile reads config from git config and, if path is non-empty,
-// merges the TOML file at that path on top.
+// merges the gitconfig-format file at that path on top.
 func LoadWithFile(ctx context.Context, runner git.Runner, path string) (*Config, error) {
 	cfg := loadBase(ctx, runner)
 	if path != "" {
-		if err := ApplyTOML(cfg, path); err != nil {
-			return nil, fmt.Errorf("failed to load config file %q: %w", path, err)
-		}
+		ApplyGitConfigFile(ctx, runner, cfg, path)
 	}
 	return cfg, cfg.Validate()
 }

@@ -66,9 +66,33 @@ func (r Runner) ConfigGet(ctx context.Context, key string) string {
 	return strings.TrimSpace(out)
 }
 
+// ConfigGetFromFile reads a git config value from a config file. Returns "" if not set.
+func (r Runner) ConfigGetFromFile(ctx context.Context, path, key string) string {
+	out, err := r.run(ctx, "git", "config", "--file", path, "--get", key)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
+
 // ConfigGetAll reads multiple values for a key (e.g. repeated keys).
 func (r Runner) ConfigGetAll(ctx context.Context, key string) []string {
 	out, err := r.run(ctx, "git", "config", "--get-all", key)
+	if err != nil {
+		return nil
+	}
+	var result []string
+	for _, line := range strings.Split(out, "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			result = append(result, line)
+		}
+	}
+	return result
+}
+
+// ConfigGetAllFromFile reads multiple values for a key from a config file.
+func (r Runner) ConfigGetAllFromFile(ctx context.Context, path, key string) []string {
+	out, err := r.run(ctx, "git", "config", "--file", path, "--get-all", key)
 	if err != nil {
 		return nil
 	}

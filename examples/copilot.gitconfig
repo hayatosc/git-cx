@@ -1,0 +1,9 @@
+[cx]
+  provider = copilot
+  # model = gpt-4o   # omit to use GitHub Copilot's default model
+  candidates = 3
+  timeout = 30
+[cx "commit"]
+  useEmoji = false
+  maxSubjectLength = 100
+  # scopes = feat
