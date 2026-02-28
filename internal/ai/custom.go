@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"git-cx/internal/config"
-	"git-cx/internal/execx"
+	"github.com/hayatosc/git-cx/internal/config"
+	"github.com/hayatosc/git-cx/internal/execx"
 )
 
 // CustomProvider runs an arbitrary shell command with a {prompt} placeholder.

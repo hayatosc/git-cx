@@ -5,11 +5,11 @@ import (
 	"errors"
 	"testing"
 
-	"git-cx/internal/ai"
-	"git-cx/internal/commit"
-	"git-cx/internal/config"
-	"git-cx/internal/execx"
-	"git-cx/internal/git"
+	"github.com/hayatosc/git-cx/internal/ai"
+	"github.com/hayatosc/git-cx/internal/commit"
+	"github.com/hayatosc/git-cx/internal/config"
+	"github.com/hayatosc/git-cx/internal/execx"
+	"github.com/hayatosc/git-cx/internal/git"
 )
 
 func TestCommitService_GenerateCandidates(t *testing.T) {

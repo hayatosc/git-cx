@@ -10,8 +10,8 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"git-cx/internal/app"
-	"git-cx/internal/commit"
+	"github.com/hayatosc/git-cx/internal/app"
+	"github.com/hayatosc/git-cx/internal/commit"
 )
 
 // State represents TUI step.

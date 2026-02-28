@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"git-cx/internal/git"
+	"github.com/hayatosc/git-cx/internal/git"
 )
 
 func getFirstConfigValue(entries map[string][]string, key string) string {

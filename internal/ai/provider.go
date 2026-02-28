@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"git-cx/internal/config"
-	"git-cx/internal/execx"
+	"github.com/hayatosc/git-cx/internal/config"
+	"github.com/hayatosc/git-cx/internal/execx"
 )
 
 // Provider is the interface for AI commit message generators.

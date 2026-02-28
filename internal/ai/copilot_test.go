@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"git-cx/internal/config"
-	"git-cx/internal/execx"
+	"github.com/hayatosc/git-cx/internal/config"
+	"github.com/hayatosc/git-cx/internal/execx"
 )
 
 func TestCopilotProviderUsesCLI(t *testing.T) {

@@ -14,6 +14,7 @@ git-cx is a CLI that generates Conventional Commits messages from staged diffs u
 ## Development Commands
 
 ```bash
+mise run dev
 mise run format
 mise run check
 mise run test

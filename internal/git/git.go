@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"git-cx/internal/execx"
+	"github.com/hayatosc/git-cx/internal/execx"
 )
 
 // ErrNoStagedChanges is returned when there are no staged changes.

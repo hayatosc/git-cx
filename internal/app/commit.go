@@ -5,10 +5,10 @@ import (
 	"errors"
 	"strings"
 
-	"git-cx/internal/ai"
-	"git-cx/internal/commit"
-	"git-cx/internal/config"
-	"git-cx/internal/git"
+	"github.com/hayatosc/git-cx/internal/ai"
+	"github.com/hayatosc/git-cx/internal/commit"
+	"github.com/hayatosc/git-cx/internal/config"
+	"github.com/hayatosc/git-cx/internal/git"
 )
 
 // CommitService coordinates commit flow.

@@ -1,6 +1,9 @@
 [tools]
 go = "1.26.0"
 
+[tasks.dev]
+run = "go run main.go"
+
 [tasks.format]
 alias = "fmt"
 run = "go fmt ./..."

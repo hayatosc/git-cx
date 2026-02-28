@@ -3,8 +3,8 @@ package ai
 import (
 	"context"
 
-	"git-cx/internal/config"
-	"git-cx/internal/execx"
+	"github.com/hayatosc/git-cx/internal/config"
+	"github.com/hayatosc/git-cx/internal/execx"
 )
 
 // ClaudeProvider calls the Claude CLI to generate commit messages.
@@ -34,4 +34,18 @@ func (p *ClaudeProvider) Generate(ctx context.Context, req GenerateRequest) ([]s
 		args = append(args, "--model", p.model)
 	}
 	return runCLI(ctx, p.runner, "claude", args, p.timeout, p.candidates)
+}
+
+func (p *ClaudeProvider) GenerateDetail(ctx context.Context, req GenerateRequest) (string, string, error) {
+	prompt := buildDetailPrompt(req)
+	args := []string{"-p", prompt}
+	if p.model != "" {
+		args = append(args, "--model", p.model)
+	}
+	output, err := runCLIOutput(ctx, p.runner, "claude", args, p.timeout)
+	if err != nil {
+		return "", "", err
+	}
+	body, footer := parseDetailOutput(output)
+	return body, footer, nil
 }

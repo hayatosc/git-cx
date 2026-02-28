@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"git-cx/internal/git"
+	"github.com/hayatosc/git-cx/internal/git"
 )
 
 // Config holds all git-cx configuration.

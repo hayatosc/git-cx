@@ -10,11 +10,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
-	"git-cx/internal/ai"
-	"git-cx/internal/app"
-	"git-cx/internal/config"
-	"git-cx/internal/git"
-	"git-cx/internal/tui"
+	"github.com/hayatosc/git-cx/internal/ai"
+	"github.com/hayatosc/git-cx/internal/app"
+	"github.com/hayatosc/git-cx/internal/config"
+	"github.com/hayatosc/git-cx/internal/git"
+	"github.com/hayatosc/git-cx/internal/tui"
 )
 
 var version = "dev"

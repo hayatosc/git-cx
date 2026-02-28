@@ -1,4 +1,4 @@
-module git-cx
+module github.com/hayatosc/git-cx
 
 go 1.25.0
 

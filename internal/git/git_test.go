@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"git-cx/internal/execx"
+	"github.com/hayatosc/git-cx/internal/execx"
 )
 
 type exitError struct {

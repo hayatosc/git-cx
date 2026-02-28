@@ -3,8 +3,8 @@ package ai
 import (
 	"context"
 
-	"git-cx/internal/config"
-	"git-cx/internal/execx"
+	"github.com/hayatosc/git-cx/internal/config"
+	"github.com/hayatosc/git-cx/internal/execx"
 )
 
 // GeminiProvider calls the Gemini CLI to generate commit messages.

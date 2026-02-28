@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"git-cx/internal/execx"
-	"git-cx/internal/git"
+	"github.com/hayatosc/git-cx/internal/execx"
+	"github.com/hayatosc/git-cx/internal/git"
 )
 
 func TestLoadWithFile_GitConfigFormatOverrides(t *testing.T) {
