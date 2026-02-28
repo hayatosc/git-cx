@@ -1,0 +1,12 @@
+[tools]
+go = "1.26.0"
+
+[tasks.format]
+alias = "fmt"
+run = "go fmt ./..."
+
+[tasks.build]
+run = "go build -o output/git-cx ."
+
+[tasks.check]
+run = "go vet ./..."
