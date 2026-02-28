@@ -6,7 +6,7 @@ func DefaultConfig() *Config {
 		Provider:   "gemini",
 		Model:      "gemini-3.0-flash",
 		Candidates: 3,
-		Timeout:    30,
+		Timeout:    120,
 		Commit: CommitConfig{
 			UseEmoji:         false,
 			MaxSubjectLength: 100,

@@ -55,6 +55,7 @@ type Model struct {
 	cfg      *config.Config
 	provider ai.Provider
 	diff     string
+	stat     string
 
 	typeList list.Model
 	msgList  list.Model
@@ -77,7 +78,7 @@ type Model struct {
 }
 
 // New creates a new TUI Model.
-func New(cfg *config.Config, provider ai.Provider, diff string) Model {
+func New(cfg *config.Config, provider ai.Provider, diff, stat string) Model {
 	// Type selector list
 	typeItems := make([]list.Item, len(commit.CommitTypes))
 	for i, t := range commit.CommitTypes {
@@ -106,6 +107,7 @@ func New(cfg *config.Config, provider ai.Provider, diff string) Model {
 		cfg:      cfg,
 		provider: provider,
 		diff:     diff,
+		stat:     stat,
 		typeList: typeList,
 		input:    inp,
 		body:     ta,
@@ -304,6 +306,7 @@ func (m Model) generateAI() tea.Cmd {
 	return func() tea.Msg {
 		req := ai.GenerateRequest{
 			Diff:       m.diff,
+			Stat:       m.stat,
 			CommitType: m.commitType,
 			Scope:      m.scope,
 			Candidates: m.cfg.Candidates,

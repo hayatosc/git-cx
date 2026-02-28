@@ -44,12 +44,14 @@ func runCommit(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to get staged diff: %w", err)
 	}
 
+	stat, _ := git.StagedStat()
+
 	provider, err := ai.NewProvider(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to initialize AI provider: %w", err)
 	}
 
-	m := tui.New(cfg, provider, diff)
+	m := tui.New(cfg, provider, diff, stat)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("TUI error: %w", err)

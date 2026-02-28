@@ -23,6 +23,15 @@ func StagedDiff() (string, error) {
 	return out, nil
 }
 
+// StagedStat returns the --stat output of the staged diff.
+func StagedStat() (string, error) {
+	out, err := run("git", "diff", "--cached", "--stat", "--no-color")
+	if err != nil {
+		return "", fmt.Errorf("git diff --stat: %w", err)
+	}
+	return strings.TrimSpace(out), nil
+}
+
 // Commit executes `git commit -m <message>`.
 func Commit(message string) error {
 	_, err := run("git", "commit", "-m", message)
