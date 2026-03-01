@@ -81,11 +81,6 @@ func loadBase(ctx context.Context, runner git.Runner) *Config {
 	if v := runner.ConfigGet(ctx, "cx.apiBaseUrl"); v != "" {
 		cfg.API.BaseURL = v
 	}
-	if cfg.API.BaseURL == "" {
-		if v := runner.ConfigGet(ctx, "cx.api.baseUrl"); v != "" {
-			cfg.API.BaseURL = v
-		}
-	}
 	if v := strings.TrimSpace(os.Getenv("OPENAI_API_KEY")); v != "" {
 		cfg.API.Key = v
 	}

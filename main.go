@@ -34,7 +34,6 @@ func main() {
 	root.PersistentFlags().Int("timeout", 0, "request timeout in seconds")
 	root.PersistentFlags().String("command", "", "command template for custom provider")
 	root.PersistentFlags().String("api-base-url", "", "base URL for api provider")
-	root.PersistentFlags().String("api-key", "", "(deprecated) ignored; use OPENAI_API_KEY env instead")
 	root.PersistentFlags().Bool("use-emoji", false, "prefix commit type with emoji")
 	root.PersistentFlags().Int("max-subject-length", 0, "max length of commit subject line")
 
@@ -98,9 +97,6 @@ func loadConfig(cmd *cobra.Command, runner git.Runner) (*config.Config, error) {
 			return nil, fmt.Errorf("failed to read api-base-url flag: %w", err)
 		}
 		cfg.API.BaseURL = v
-	}
-	if flags.Changed("api-key") {
-		// deprecated: ignore for now
 	}
 	if flags.Changed("use-emoji") {
 		v, err := flags.GetBool("use-emoji")
