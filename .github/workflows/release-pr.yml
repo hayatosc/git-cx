@@ -1,0 +1,101 @@
+name: release-pr
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 1.2.3)"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup mise
+        uses: jdx/mise-action@v3
+        with:
+          install: true
+          cache: true
+      - name: Validate version
+        run: |
+          VERSION="${{ inputs.version }}"
+          if [ -z "$VERSION" ]; then
+            echo "version is empty"
+            exit 1
+          fi
+          case "$VERSION" in
+            v*)
+              echo "version must not start with 'v'"
+              exit 1
+              ;;
+          esac
+          case "$VERSION" in
+            *[[:space:]]*)
+              echo "version must not contain whitespace"
+              exit 1
+              ;;
+          esac
+      - name: Update VERSION
+        run: |
+          printf "%s\n" "${{ inputs.version }}" > VERSION
+      - name: Update CHANGELOG
+        run: |
+          VERSION="${{ inputs.version }}"
+          DATE="$(date -u +%Y-%m-%d)"
+          if [ ! -f CHANGELOG.md ]; then
+            printf "# Changelog\n\n" > CHANGELOG.md
+          fi
+          if ! grep -q "^## \[${VERSION}\]" CHANGELOG.md; then
+            {
+              echo "## [${VERSION}] - ${DATE}"
+              echo ""
+              echo "- TODO"
+              echo ""
+              cat CHANGELOG.md
+            } > CHANGELOG.md.new
+            mv CHANGELOG.md.new CHANGELOG.md
+          fi
+      - name: Create release branch
+        id: release_branch
+        run: |
+          VERSION="${{ inputs.version }}"
+          BRANCH="release/v${VERSION}"
+          echo "pushed=false" >> "$GITHUB_OUTPUT"
+          git checkout -b "${BRANCH}"
+          git add VERSION CHANGELOG.md
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "chore: prepare release v${VERSION}"
+          git push -u origin "${BRANCH}"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+      - name: Create pull request
+        if: steps.release_branch.outputs.pushed == 'true'
+        run: |
+          VERSION="${{ inputs.version }}"
+          BRANCH="release/v${VERSION}"
+          if gh pr view "${BRANCH}" --json number >/dev/null 2>&1; then
+            echo "Pull request already exists for ${BRANCH}"
+            exit 0
+          fi
+          gh pr create \
+            --title "chore: release v${VERSION}" \
+            --body "Release v${VERSION}" \
+            --base main \
+            --head "${BRANCH}"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
