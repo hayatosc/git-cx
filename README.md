@@ -2,8 +2,6 @@
 
 > Stage your changes, generate Conventional Commits with AI, pick one in a TUI.
 
-![demo](assets/demo.gif)
-
 ## Quick Start
 
 **1. Install**
