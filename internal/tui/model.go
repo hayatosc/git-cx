@@ -97,6 +97,7 @@ func New(service *app.CommitService, diff, stat string) Model {
 	typeList.SetFilteringEnabled(false)
 
 	detailItems := []list.Item{
+		item{title: "[Skip]", desc: "Skip body and footer"},
 		item{title: "[Generate with AI]", desc: "Generate body/footer with AI"},
 		item{title: "[Manual entry]", desc: "Enter body/footer manually"},
 	}
@@ -110,7 +111,7 @@ func New(service *app.CommitService, diff, stat string) Model {
 	inp.Focus()
 
 	ta := textarea.New()
-	ta.Placeholder = "(optional) press Enter to skip"
+	ta.Placeholder = "(optional) press Esc to skip, Tab to confirm"
 	ta.SetWidth(60)
 	ta.SetHeight(5)
 
@@ -231,6 +232,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case stateInputMsg:
+		if msg.Type == tea.KeyCtrlR {
+			m.err = nil
+			m.state = stateAILoading
+			return m, tea.Batch(m.spin.Tick, m.generateAI())
+		}
 		if msg.Type == tea.KeyEnter {
 			m.err = nil
 			m.subject = m.input.Value()
@@ -244,9 +250,20 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case stateSelectDetailMode:
+		if msg.Type == tea.KeyCtrlR {
+			m.err = nil
+			m.state = stateDetailAILoading
+			return m, tea.Batch(m.spin.Tick, m.generateAIDetail())
+		}
 		if msg.Type == tea.KeyEnter {
 			if i, ok := m.detailList.SelectedItem().(item); ok {
 				switch i.title {
+				case "[Skip]":
+					m.err = nil
+					m.bodyText = ""
+					m.footer = ""
+					m.state = stateConfirm
+					return m, nil
 				case "[Generate with AI]":
 					m.err = nil
 					m.state = stateDetailAILoading
@@ -267,7 +284,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case stateInputBody:
-		if msg.Type == tea.KeyEnter && m.body.Value() == "" {
+		if msg.Type == tea.KeyEsc {
 			m.bodyText = ""
 			m.state = stateInputFooter
 			m.input.Placeholder = "(optional) footer, press Enter to skip"
@@ -275,7 +292,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.input.Focus()
 			return m, nil
 		}
-		if msg.Type == tea.KeyCtrlD {
+		if msg.Type == tea.KeyTab {
 			m.bodyText = m.body.Value()
 			m.state = stateInputFooter
 			m.input.Placeholder = "(optional) footer, press Enter to skip"
@@ -306,6 +323,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "n", "N", "q":
 			m.quitting = true
 			return m, tea.Quit
+		}
+		if msg.Type == tea.KeyEnter {
+			m.state = stateDone
+			return m, m.doCommit()
 		}
 	}
 
@@ -345,11 +366,8 @@ func (m Model) handleAIResult(msg aiResultMsg) (tea.Model, tea.Cmd) {
 func (m Model) handleAIDetailResult(msg aiDetailResultMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
 		m.err = msg.err
-		m.bodyText = ""
-		m.footer = ""
-		m.state = stateInputBody
-		m.body.SetValue("")
-		m.body.Focus()
+		m.state = stateSelectDetailMode
+		m.detailList.Select(0)
 		return m, nil
 	}
 
@@ -478,11 +496,15 @@ func (m Model) View() string {
 			errMsg,
 			titleStyle.Render("Enter commit message"),
 			m.input.View(),
-			helpStyle.Render("Enter to confirm • Ctrl+C to quit"),
+			helpStyle.Render("Enter to confirm • Ctrl+R to retry AI • Ctrl+C to quit"),
 		)
 
 	case stateSelectDetailMode:
-		return m.detailList.View()
+		view := m.detailList.View()
+		if m.err != nil {
+			view = errorStyle.Render(fmt.Sprintf("AI error: %v\n\n", m.err)) + view
+		}
+		return view + "\n" + helpStyle.Render("Ctrl+R to retry AI • Ctrl+C to quit")
 
 	case stateDetailAILoading:
 		return fmt.Sprintf(
@@ -501,7 +523,7 @@ func (m Model) View() string {
 			errMsg,
 			titleStyle.Render("Enter commit body (optional)"),
 			m.body.View(),
-			helpStyle.Render("Enter to skip (empty) • Ctrl+D to confirm • Ctrl+C to quit"),
+			helpStyle.Render("Esc to skip • Tab to confirm • Ctrl+C to quit"),
 		)
 
 	case stateInputFooter:
@@ -509,7 +531,7 @@ func (m Model) View() string {
 			"%s\n\n%s\n\n%s",
 			titleStyle.Render("Enter commit footer (optional)"),
 			m.input.View(),
-			helpStyle.Render("Enter to confirm • Ctrl+C to quit"),
+			helpStyle.Render("Enter to confirm (empty to skip) • Ctrl+C to quit"),
 		)
 
 	case stateConfirm:
@@ -525,7 +547,7 @@ func (m Model) View() string {
 			"%s\n\n%s\n\n%s",
 			titleStyle.Render("Confirm commit message"),
 			previewStyle.Render(preview),
-			helpStyle.Render("y to commit • n to abort • Ctrl+C to quit"),
+			helpStyle.Render("y/Enter to commit • n to abort • Ctrl+C to quit"),
 		)
 
 	case stateDone:
