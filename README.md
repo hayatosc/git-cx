@@ -40,7 +40,7 @@ git cx
 | Provider | Requirements | Key config |
 |---|---|---|
 | `gemini` | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `cx.provider = gemini` |
-| `copilot` | `gh` CLI + Copilot subscription | `cx.provider = copilot` |
+| `copilot` | [Copilot CLI](https://github.com/github/copilot-cli) | `cx.provider = copilot` |
 | `claude` | [Claude Code](https://github.com/anthropics/claude-code) | `cx.provider = claude` |
 | `codex` | [Codex CLI](https://github.com/openai/codex) | `cx.provider = codex` |
 | `api` | OpenAI-compatible endpoint + API key | `cx.apiBaseUrl` + `OPENAI_API_KEY` |
