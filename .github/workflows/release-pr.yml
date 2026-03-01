@@ -43,6 +43,20 @@ jobs:
               exit 1
               ;;
           esac
+          if ! printf '%s\n' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.+-]+)?$'; then
+            echo "version must look like MAJOR.MINOR.PATCH (optionally with pre-release/metadata), got: '$VERSION'"
+            exit 1
+          fi
+          TAG_REF="refs/tags/v${VERSION}"
+          BRANCH_REF="refs/heads/release/v${VERSION}"
+          if ! printf '%s\n' "$TAG_REF" | git check-ref-format --normalize --stdin >/dev/null 2>&1; then
+            echo "derived tag ref '$TAG_REF' is not a valid git ref (version: '$VERSION')"
+            exit 1
+          fi
+          if ! printf '%s\n' "$BRANCH_REF" | git check-ref-format --normalize --stdin >/dev/null 2>&1; then
+            echo "derived branch ref '$BRANCH_REF' is not a valid git ref (version: '$VERSION')"
+            exit 1
+          fi
       - name: Update VERSION
         run: |
           printf "%s\n" "${{ inputs.version }}" > VERSION
@@ -54,13 +68,18 @@ jobs:
             printf "# Changelog\n\n" > CHANGELOG.md
           fi
           if ! grep -q "^## \[${VERSION}\]" CHANGELOG.md; then
-            {
-              echo "## [${VERSION}] - ${DATE}"
-              echo ""
-              echo "- TODO"
-              echo ""
-              cat CHANGELOG.md
-            } > CHANGELOG.md.new
+            awk -v ver="$VERSION" -v date="$DATE" '
+              NR == 1 {
+                print;
+                print "";
+                print "## [" ver "] - " date;
+                print "";
+                print "- TODO";
+                print "";
+                next;
+              }
+              { print }
+            ' CHANGELOG.md > CHANGELOG.md.new
             mv CHANGELOG.md.new CHANGELOG.md
           fi
       - name: Create release branch
@@ -69,7 +88,12 @@ jobs:
           VERSION="${{ inputs.version }}"
           BRANCH="release/v${VERSION}"
           echo "pushed=false" >> "$GITHUB_OUTPUT"
-          git checkout -b "${BRANCH}"
+          if git ls-remote --exit-code --heads origin "${BRANCH}" >/dev/null 2>&1; then
+            git fetch origin "${BRANCH}"
+            git checkout -B "${BRANCH}" "origin/${BRANCH}"
+          else
+            git checkout -b "${BRANCH}"
+          fi
           git add VERSION CHANGELOG.md
           if git diff --cached --quiet; then
             echo "No changes to commit"

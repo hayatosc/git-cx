@@ -2,10 +2,6 @@ version: 2
 
 project_name: git-cx
 
-before:
-  hooks:
-    - go mod tidy
-
 builds:
   - main: ./main.go
     binary: git-cx

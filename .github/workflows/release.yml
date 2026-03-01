@@ -31,7 +31,7 @@ jobs:
             echo "VERSION is empty"
             exit 1
           fi
-          if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
+          if git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null 2>&1; then
             echo "Tag v${VERSION} already exists"
             echo "created=false" >> "$GITHUB_OUTPUT"
             exit 0
