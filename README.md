@@ -1,146 +1,102 @@
 # git-cx
 
-An AI-powered `git` subcommand that generates Conventional Commits messages and lets you pick one in a TUI.
+> Stage your changes, generate Conventional Commits with AI, pick one in a TUI.
 
-## Usage
+![demo](assets/demo.gif)
 
-``` console
-$ git add -A
-$ git cx
+## Quick Start
+
+**1. Install**
+
+```console
+go install github.com/hayatosc/git-cx@latest
 ```
 
-Pick a generated candidate, then optionally enter a body and footer before committing.
+**2. Set your provider (example: Gemini)**
 
-### Commands
-
-``` console
-$ git cx version
-$ git cx config
+```console
+git config --global cx.provider gemini
 ```
 
-## Install
+**3. Stage changes and run**
 
-**go install:**
-
-``` console
-$ go install github.com/hayatosc/git-cx@latest
+```console
+git add -A
+git cx
 ```
 
-**manually:**
+## TUI Keyboard Shortcuts
 
-``` console
-$ go build -o output/git-cx .
-$ ./output/git-cx
-```
-
-## Configuration
-
-Configure via `git config` or a gitconfig-format file (`--config`). All options can be overridden by flags per invocation. The API key is read only from `OPENAI_API_KEY`.
-
-### git config
-
-``` console
-# CLI providers (gemini/copilot/claude/codex/custom)
-$ git config --global cx.provider gemini
-$ git config --global cx.model gemini-3.0-flash
-$ git config --global cx.candidates 3
-$ git config --global cx.timeout 30
-$ git config --global cx.commit.useEmoji false
-$ git config --global cx.commit.maxSubjectLength 100
-$ git config --global cx.commit.scopes feat
-
-# API provider
-$ git config --global cx.provider api
-$ git config --global cx.model gpt-5
-$ git config --global cx.apiBaseUrl https://api.openai.com/v1
-$ OPENAI_API_KEY=YOUR_API_KEY git cx
-```
-
-### .gitconfig example
-
-``` ini
-# CLI providers (gemini/copilot/claude/codex/custom)
-[cx]
-  provider = gemini
-  model = gemini-3.0-flash
-  candidates = 3
-  timeout = 30
-[cx "commit"]
-  useEmoji = false
-  maxSubjectLength = 100
-  scopes = feat
-```
-
-``` ini
-# API provider
-[cx]
-  provider = api
-  model = gpt-5
-  apiBaseUrl = https://api.openai.com/v1
-```
-
-### Config file (`--config`)
-
-``` console
-$ git cx --config examples/gemini.gitconfig
-$ git cx --config examples/copilot.gitconfig
-$ git cx --config examples/claude.gitconfig
-$ git cx --config examples/codex.gitconfig
-$ git cx --config examples/api.gitconfig
-```
-
-### Flags
-
-``` console
-$ git cx --provider gemini --model gemini-3.0-flash
-$ git cx --candidates 3 --timeout 30
-$ git cx --use-emoji --max-subject-length 100
-$ git cx --command "my-cli --prompt {prompt}"
-$ OPENAI_API_KEY=YOUR_API_KEY git cx --provider api --model gpt-5 --api-base-url https://api.openai.com/v1
-```
-
-### Configuration mapping
-
-| Setting | git config | gitconfig file | Flag | Notes |
-| --- | --- | --- | --- | --- |
-| provider | `cx.provider` | `[cx] provider` | `--provider` | `gemini`, `copilot`, `claude`, `codex`, `api`, `custom` |
-| model | `cx.model` | `[cx] model` | `--model` | required for `api` |
-| candidates | `cx.candidates` | `[cx] candidates` | `--candidates` | number of suggestions |
-| timeout | `cx.timeout` | `[cx] timeout` | `--timeout` | seconds |
-| command | `cx.command` | `[cx] command` | `--command` | custom provider only |
-| apiBaseUrl | `cx.apiBaseUrl` | `[cx] apiBaseUrl` | `--api-base-url` | OpenAI-compatible base URL |
-| apiKey | (not supported) | (not supported) | (deprecated) `--api-key` | use `OPENAI_API_KEY` |
-| commit.useEmoji | `cx.commit.useEmoji` | `[cx "commit"] useEmoji` | `--use-emoji` | adds emoji prefix |
-| commit.maxSubjectLength | `cx.commit.maxSubjectLength` | `[cx "commit"] maxSubjectLength` | `--max-subject-length` | 0 disables limit |
-| commit.scopes | `cx.commit.scopes` | `[cx "commit"] scopes` | (none) | repeatable in git config |
-
-Legacy keys for API base URL are still accepted (`cx.api.baseUrl`, `[api] base_url`). API keys in config are ignored.
+| Screen | Key | Action |
+|---|---|---|
+| Select Type / Message | `↑` `↓` | Move |
+| Select Type / Message | `Enter` | Confirm |
+| Input Scope / Footer | `Enter` | Next |
+| Input Body | `Ctrl+D` | Done |
+| Input Body | `Enter` (empty) | Skip |
+| Confirm | `y` | Commit |
+| Confirm | `n` / `q` | Abort |
 
 ## Providers
 
-Select the provider with `cx.provider`.
+| Provider | Requirements | Key config |
+|---|---|---|
+| `gemini` | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `cx.provider = gemini` |
+| `copilot` | `gh` CLI + Copilot subscription | `cx.provider = copilot` |
+| `claude` | [Claude Code](https://github.com/anthropics/claude-code) | `cx.provider = claude` |
+| `codex` | [Codex CLI](https://github.com/openai/codex) | `cx.provider = codex` |
+| `api` | OpenAI-compatible endpoint + API key | `cx.apiBaseUrl` + `OPENAI_API_KEY` |
+| `custom` | Any CLI with stdout output | `cx.command = "mycli --prompt {prompt}"` |
 
-- `gemini`: uses the `gemini` CLI
-- `copilot`: uses the `copilot` CLI
-- `claude`: uses the `claude` CLI
-- `codex`: uses the `codex exec` CLI
-- `api`: uses an OpenAI-compatible API endpoint (set `cx.apiBaseUrl` and `OPENAI_API_KEY`)
-- `custom`: runs the command in `cx.command` (replaces `{prompt}`)
+## Configuration
 
-For the `api` provider, set `cx.apiBaseUrl` to your OpenAI-compatible endpoint (e.g. `https://api.openai.com/v1`, `https://openrouter.ai/api/v1`, `http://localhost:8000/v1`) and set `OPENAI_API_KEY`.
+All options can be set via `git config`, a config file (`--config`), or flags per invocation.
 
-## Commit type
+### git config keys
 
-Type selection includes `auto` to let AI decide the Conventional Commit header. When `auto` is selected, manual input expects a full Conventional header (e.g. `feat(core): add feature`).
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `cx.provider` | string | `gemini` | AI provider |
+| `cx.model` | string | — | Model name |
+| `cx.candidates` | int | `3` | Number of candidates |
+| `cx.timeout` | int | `30` | Request timeout (seconds) |
+| `cx.command` | string | — | Command template for `custom` provider (`{prompt}` is replaced) |
+| `cx.apiBaseUrl` | string | — | Base URL for `api` provider |
+| `cx.commit.useEmoji` | bool | `false` | Prefix commit type with emoji |
+| `cx.commit.maxSubjectLength` | int | `100` | Max subject line length |
+| `cx.commit.scopes` | string (multi) | — | Scope candidates |
 
-## Commit details
+**Environment:** `OPENAI_API_KEY` — required for `api` provider.
 
-After selecting a subject, you can choose to generate the body/footer with AI or enter them manually. The body input can be skipped by pressing Enter on an empty textarea.
+### Flags
+
+| Flag | Description |
+|---|---|
+| `--config <path>` | gitconfig-format config file |
+| `--provider <name>` | AI provider |
+| `--model <name>` | Model name |
+| `--candidates <n>` | Number of candidates |
+| `--timeout <n>` | Timeout in seconds |
+| `--command <template>` | Command template for `custom` provider |
+| `--api-base-url <url>` | Base URL for `api` provider |
+| `--use-emoji` | Prefix commit type with emoji |
+| `--max-subject-length <n>` | Max subject line length |
+
+## Config file (`--config`)
+
+```console
+git cx --config examples/gemini.gitconfig
+git cx --config examples/copilot.gitconfig
+git cx --config examples/claude.gitconfig
+git cx --config examples/codex.gitconfig
+git cx --config examples/api.gitconfig
+```
+
 ## Development
 
-``` console
-$ mise run format
-$ mise run check
-$ mise run test
-$ mise run build
+```console
+mise run format
+mise run check
+mise run test
+mise run build
 ```
