@@ -62,29 +62,37 @@ jobs:
         run: |
           VERSION="${{ inputs.version }}"
           BRANCH="release/v${VERSION}"
-          echo "pushed=false" >> "$GITHUB_OUTPUT"
+          echo "branch_ready=" >> "$GITHUB_OUTPUT"
           if git ls-remote --exit-code --heads origin "${BRANCH}" >/dev/null 2>&1; then
             git fetch origin "${BRANCH}"
             git checkout -B "${BRANCH}" "origin/${BRANCH}"
+            BRANCH_ON_REMOTE=true
           else
             git checkout -b "${BRANCH}"
+            BRANCH_ON_REMOTE=false
           fi
           printf "%s\n" "${VERSION}" > VERSION
           DATE="$(date -u +%Y-%m-%d)"
           if [ ! -f CHANGELOG.md ]; then
-            printf "# Changelog\n\n" > CHANGELOG.md
+            printf "# Changelog\n" > CHANGELOG.md
           fi
-          if ! grep -q "^## \[${VERSION}\]" CHANGELOG.md; then
-            awk -v ver="$VERSION" -v date="$DATE" '
+          if ! grep -q "^## v${VERSION}" CHANGELOG.md; then
+            # 直前タグからのコミット一覧を生成
+            PREV_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+            if [ -n "$PREV_TAG" ]; then
+              ENTRIES="$(git log "${PREV_TAG}..HEAD" --format='* %H %s')"
+            else
+              ENTRIES="$(git log --format='* %H %s')"
+            fi
+            SECTION="$(printf '## v%s - %s\n\n%s' "$VERSION" "$DATE" "$ENTRIES")"
+            awk -v section="$SECTION" '
               NR == 1 {
                 print;
                 print "";
-                print "## [" ver "] - " date;
-                print "";
-                print "- TODO";
-                print "";
+                print section;
                 next;
               }
+              NR == 2 && /^$/ { next }
               { print }
             ' CHANGELOG.md > CHANGELOG.md.new
             mv CHANGELOG.md.new CHANGELOG.md
@@ -92,18 +100,21 @@ jobs:
           git add VERSION CHANGELOG.md
           if git diff --cached --quiet; then
             echo "No changes to commit"
+            if [ "$BRANCH_ON_REMOTE" = "true" ]; then
+              echo "branch_ready=${BRANCH}" >> "$GITHUB_OUTPUT"
+            fi
             exit 0
           fi
           git commit -m "chore: prepare release v${VERSION}"
           git push -u origin "${BRANCH}"
-          echo "pushed=true" >> "$GITHUB_OUTPUT"
+          echo "branch_ready=${BRANCH}" >> "$GITHUB_OUTPUT"
         env:
           GIT_AUTHOR_NAME: github-actions[bot]
           GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
           GIT_COMMITTER_NAME: github-actions[bot]
           GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
       - name: Create pull request
-        if: steps.release_branch.outputs.pushed == 'true'
+        if: steps.release_branch.outputs.branch_ready != ''
         run: |
           VERSION="${{ inputs.version }}"
           BRANCH="release/v${VERSION}"
