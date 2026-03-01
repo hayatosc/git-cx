@@ -57,12 +57,19 @@ jobs:
             echo "derived branch ref '$BRANCH_REF' is not a valid git ref (version: '$VERSION')"
             exit 1
           fi
-      - name: Update VERSION
-        run: |
-          printf "%s\n" "${{ inputs.version }}" > VERSION
-      - name: Update CHANGELOG
+      - name: Create release branch and update files
+        id: release_branch
         run: |
           VERSION="${{ inputs.version }}"
+          BRANCH="release/v${VERSION}"
+          echo "pushed=false" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --heads origin "${BRANCH}" >/dev/null 2>&1; then
+            git fetch origin "${BRANCH}"
+            git checkout -B "${BRANCH}" "origin/${BRANCH}"
+          else
+            git checkout -b "${BRANCH}"
+          fi
+          printf "%s\n" "${VERSION}" > VERSION
           DATE="$(date -u +%Y-%m-%d)"
           if [ ! -f CHANGELOG.md ]; then
             printf "# Changelog\n\n" > CHANGELOG.md
@@ -81,18 +88,6 @@ jobs:
               { print }
             ' CHANGELOG.md > CHANGELOG.md.new
             mv CHANGELOG.md.new CHANGELOG.md
-          fi
-      - name: Create release branch
-        id: release_branch
-        run: |
-          VERSION="${{ inputs.version }}"
-          BRANCH="release/v${VERSION}"
-          echo "pushed=false" >> "$GITHUB_OUTPUT"
-          if git ls-remote --exit-code --heads origin "${BRANCH}" >/dev/null 2>&1; then
-            git fetch origin "${BRANCH}"
-            git checkout -B "${BRANCH}" "origin/${BRANCH}"
-          else
-            git checkout -b "${BRANCH}"
           fi
           git add VERSION CHANGELOG.md
           if git diff --cached --quiet; then

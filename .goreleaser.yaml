@@ -3,7 +3,7 @@ version: 2
 project_name: git-cx
 
 builds:
-  - main: ./main.go
+  - main: .
     binary: git-cx
     env:
       - CGO_ENABLED=0
