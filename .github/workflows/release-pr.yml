@@ -49,11 +49,11 @@ jobs:
           fi
           TAG_REF="refs/tags/v${VERSION}"
           BRANCH_REF="refs/heads/release/v${VERSION}"
-          if ! printf '%s\n' "$TAG_REF" | git check-ref-format --normalize --stdin >/dev/null 2>&1; then
+          if ! git check-ref-format --normalize "$TAG_REF" >/dev/null 2>&1; then
             echo "derived tag ref '$TAG_REF' is not a valid git ref (version: '$VERSION')"
             exit 1
           fi
-          if ! printf '%s\n' "$BRANCH_REF" | git check-ref-format --normalize --stdin >/dev/null 2>&1; then
+          if ! git check-ref-format --normalize "$BRANCH_REF" >/dev/null 2>&1; then
             echo "derived branch ref '$BRANCH_REF' is not a valid git ref (version: '$VERSION')"
             exit 1
           fi
