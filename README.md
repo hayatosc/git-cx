@@ -100,3 +100,10 @@ mise run check
 mise run test
 mise run build
 ```
+
+## Release
+
+1. Run the "release-pr" workflow with a version like `1.2.3`.
+2. Merge the generated PR.
+
+The release workflow runs on the VERSION update and publishes GitHub Releases via GoReleaser.

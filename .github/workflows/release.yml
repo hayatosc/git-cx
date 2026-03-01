@@ -1,0 +1,52 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - VERSION
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup mise
+        uses: jdx/mise-action@v3
+        with:
+          install: true
+          cache: true
+      - name: Create tag from VERSION
+        id: create_tag
+        run: |
+          VERSION="$(tr -d '\n' < VERSION)"
+          if [ -z "$VERSION" ]; then
+            echo "VERSION is empty"
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null 2>&1; then
+            echo "Tag v${VERSION} already exists"
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${VERSION}" -m "Release v${VERSION}"
+          git push origin "v${VERSION}"
+          echo "created=true" >> "$GITHUB_OUTPUT"
+      - name: Run GoReleaser
+        if: steps.create_tag.outputs.created == 'true'
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
