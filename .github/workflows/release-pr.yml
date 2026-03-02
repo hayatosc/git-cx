@@ -77,7 +77,6 @@ jobs:
             printf "# Changelog\n" > CHANGELOG.md
           fi
           if ! grep -q "^## v${VERSION}" CHANGELOG.md; then
-            # 直前タグからのコミット一覧を生成
             PREV_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
             if [ -n "$PREV_TAG" ]; then
               ENTRIES="$(git log "${PREV_TAG}..HEAD" --format='* %H %s')"
