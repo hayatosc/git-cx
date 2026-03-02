@@ -8,44 +8,25 @@ import (
 )
 
 // CopilotProvider calls GitHub Copilot CLI to generate commit messages.
-type CopilotProvider struct {
-	model      string
-	candidates int
-	timeout    int
-	runner     execx.Runner
-}
+type CopilotProvider struct{ cliProvider }
 
 // NewCopilotProvider creates a CopilotProvider from config.
 func NewCopilotProvider(cfg *config.Config, runner execx.Runner) *CopilotProvider {
-	return &CopilotProvider{
+	return &CopilotProvider{cliProvider{
+		cfg:        cliArgs{name: "copilot", promptFlag: "-p", modelFlag: "--model"},
 		model:      cfg.Model,
 		candidates: cfg.Candidates,
 		timeout:    cfg.Timeout,
 		runner:     runner,
-	}
+	}}
 }
 
 func (p *CopilotProvider) Name() string { return "copilot" }
 
 func (p *CopilotProvider) Generate(ctx context.Context, req GenerateRequest) ([]string, error) {
-	prompt := buildPrompt(req)
-	args := []string{"-p", prompt}
-	if p.model != "" {
-		args = append(args, "--model", p.model)
-	}
-	return runCLI(ctx, p.runner, "copilot", args, p.timeout, p.candidates)
+	return p.generate(ctx, req)
 }
 
 func (p *CopilotProvider) GenerateDetail(ctx context.Context, req GenerateRequest) (string, string, error) {
-	prompt := buildDetailPrompt(req)
-	args := []string{"-p", prompt}
-	if p.model != "" {
-		args = append(args, "--model", p.model)
-	}
-	output, err := runCLIOutput(ctx, p.runner, "copilot", args, p.timeout)
-	if err != nil {
-		return "", "", err
-	}
-	body, footer := parseDetailOutput(output)
-	return body, footer, nil
+	return p.generateDetail(ctx, req)
 }

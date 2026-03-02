@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/hayatosc/git-cx/internal/ai"
 	"github.com/hayatosc/git-cx/internal/app"
@@ -46,6 +47,42 @@ func main() {
 	}
 }
 
+func applyStringFlag(flags *pflag.FlagSet, name string, dest *string) error {
+	if !flags.Changed(name) {
+		return nil
+	}
+	v, err := flags.GetString(name)
+	if err != nil {
+		return fmt.Errorf("failed to read %s flag: %w", name, err)
+	}
+	*dest = v
+	return nil
+}
+
+func applyIntFlag(flags *pflag.FlagSet, name string, dest *int) error {
+	if !flags.Changed(name) {
+		return nil
+	}
+	v, err := flags.GetInt(name)
+	if err != nil {
+		return fmt.Errorf("failed to read %s flag: %w", name, err)
+	}
+	*dest = v
+	return nil
+}
+
+func applyBoolFlag(flags *pflag.FlagSet, name string, dest *bool) error {
+	if !flags.Changed(name) {
+		return nil
+	}
+	v, err := flags.GetBool(name)
+	if err != nil {
+		return fmt.Errorf("failed to read %s flag: %w", name, err)
+	}
+	*dest = v
+	return nil
+}
+
 func loadConfig(cmd *cobra.Command, runner git.Runner) (*config.Config, error) {
 	ctx := context.Background()
 	flags := cmd.Flags()
@@ -57,61 +94,19 @@ func loadConfig(cmd *cobra.Command, runner git.Runner) (*config.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	if flags.Changed("provider") {
-		v, err := flags.GetString("provider")
-		if err != nil {
-			return nil, fmt.Errorf("failed to read provider flag: %w", err)
+	for _, apply := range []error{
+		applyStringFlag(flags, "provider", &cfg.Provider),
+		applyStringFlag(flags, "model", &cfg.Model),
+		applyIntFlag(flags, "candidates", &cfg.Candidates),
+		applyIntFlag(flags, "timeout", &cfg.Timeout),
+		applyStringFlag(flags, "command", &cfg.Command),
+		applyStringFlag(flags, "api-base-url", &cfg.API.BaseURL),
+		applyBoolFlag(flags, "use-emoji", &cfg.Commit.UseEmoji),
+		applyIntFlag(flags, "max-subject-length", &cfg.Commit.MaxSubjectLength),
+	} {
+		if apply != nil {
+			return nil, apply
 		}
-		cfg.Provider = v
-	}
-	if flags.Changed("model") {
-		v, err := flags.GetString("model")
-		if err != nil {
-			return nil, fmt.Errorf("failed to read model flag: %w", err)
-		}
-		cfg.Model = v
-	}
-	if flags.Changed("candidates") {
-		v, err := flags.GetInt("candidates")
-		if err != nil {
-			return nil, fmt.Errorf("failed to read candidates flag: %w", err)
-		}
-		cfg.Candidates = v
-	}
-	if flags.Changed("timeout") {
-		v, err := flags.GetInt("timeout")
-		if err != nil {
-			return nil, fmt.Errorf("failed to read timeout flag: %w", err)
-		}
-		cfg.Timeout = v
-	}
-	if flags.Changed("command") {
-		v, err := flags.GetString("command")
-		if err != nil {
-			return nil, fmt.Errorf("failed to read command flag: %w", err)
-		}
-		cfg.Command = v
-	}
-	if flags.Changed("api-base-url") {
-		v, err := flags.GetString("api-base-url")
-		if err != nil {
-			return nil, fmt.Errorf("failed to read api-base-url flag: %w", err)
-		}
-		cfg.API.BaseURL = v
-	}
-	if flags.Changed("use-emoji") {
-		v, err := flags.GetBool("use-emoji")
-		if err != nil {
-			return nil, fmt.Errorf("failed to read use-emoji flag: %w", err)
-		}
-		cfg.Commit.UseEmoji = v
-	}
-	if flags.Changed("max-subject-length") {
-		v, err := flags.GetInt("max-subject-length")
-		if err != nil {
-			return nil, fmt.Errorf("failed to read max-subject-length flag: %w", err)
-		}
-		cfg.Commit.MaxSubjectLength = v
 	}
 	return cfg, cfg.Validate()
 }

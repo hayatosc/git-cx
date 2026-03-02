@@ -189,155 +189,188 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch m.state {
 	case stateSelectType:
-		if msg.Type == tea.KeyEnter {
-			if i, ok := m.typeList.SelectedItem().(item); ok {
-				m.commitType = i.title
-				m.state = stateInputScope
-				m.input.Placeholder = "(optional) scope, press Enter to skip"
-				m.input.SetValue("")
-				m.input.Focus()
-			}
-			return m, nil
-		}
-		var cmd tea.Cmd
-		m.typeList, cmd = m.typeList.Update(msg)
-		return m, cmd
-
+		return m.handleSelectTypeKey(msg)
 	case stateInputScope:
-		if msg.Type == tea.KeyEnter {
-			m.scope = m.input.Value()
-			m.input.SetValue("")
-			m.state = stateAILoading
-			return m, tea.Batch(m.spin.Tick, m.generateAI())
-		}
-		var cmd tea.Cmd
-		m.input, cmd = m.input.Update(msg)
-		return m, cmd
-
+		return m.handleInputScopeKey(msg)
 	case stateSelectMsg:
-		if msg.Type == tea.KeyEnter {
-			if i, ok := m.msgList.SelectedItem().(item); ok {
-				switch i.title {
-				case "[Manual entry]":
-					m.state = stateInputMsg
-					m.input.Placeholder = m.subjectPlaceholder()
-					m.input.SetValue("")
-					m.input.Focus()
-				case "[Regenerate]":
-					m.state = stateAILoading
-					return m, tea.Batch(m.spin.Tick, m.generateAI())
-				default:
-					m.err = nil
-					m.subject = i.title
-					m.state = stateSelectDetailMode
-					m.detailList.Select(1)
-				}
-			}
-			return m, nil
-		}
-		var cmd tea.Cmd
-		m.msgList, cmd = m.msgList.Update(msg)
-		return m, cmd
-
+		return m.handleSelectMsgKey(msg)
 	case stateInputMsg:
-		if msg.Type == tea.KeyCtrlR {
-			m.err = nil
-			m.state = stateAILoading
-			return m, tea.Batch(m.spin.Tick, m.generateAI())
-		}
-		if msg.Type == tea.KeyEnter {
-			m.err = nil
-			m.subject = m.input.Value()
-			m.input.SetValue("")
-			m.state = stateSelectDetailMode
-			m.detailList.Select(1)
-			return m, nil
-		}
-		var cmd tea.Cmd
-		m.input, cmd = m.input.Update(msg)
-		return m, cmd
-
+		return m.handleInputMsgKey(msg)
 	case stateSelectDetailMode:
-		if msg.Type == tea.KeyCtrlR {
-			m.err = nil
-			m.state = stateDetailAILoading
-			return m, tea.Batch(m.spin.Tick, m.generateAIDetail())
-		}
-		if msg.Type == tea.KeyEnter {
-			if i, ok := m.detailList.SelectedItem().(item); ok {
-				switch i.title {
-				case "[Skip]":
-					m.err = nil
-					m.bodyText = ""
-					m.footer = ""
-					m.state = stateConfirm
-					return m, nil
-				case "[Generate with AI]":
-					m.err = nil
-					m.state = stateDetailAILoading
-					return m, tea.Batch(m.spin.Tick, m.generateAIDetail())
-				default:
-					m.err = nil
-					m.bodyText = ""
-					m.footer = ""
-					m.state = stateInputBody
-					m.body.SetValue("")
-					m.body.Focus()
-				}
-			}
-			return m, nil
-		}
-		var cmd tea.Cmd
-		m.detailList, cmd = m.detailList.Update(msg)
-		return m, cmd
-
+		return m.handleSelectDetailModeKey(msg)
 	case stateInputBody:
-		if msg.Type == tea.KeyEsc {
-			m.bodyText = ""
-			m.state = stateInputFooter
-			m.input.Placeholder = "(optional) footer, press Enter to skip"
-			m.input.SetValue(m.footer)
-			m.input.Focus()
-			return m, nil
-		}
-		if msg.Type == tea.KeyTab {
-			m.bodyText = m.body.Value()
-			m.state = stateInputFooter
-			m.input.Placeholder = "(optional) footer, press Enter to skip"
-			m.input.SetValue(m.footer)
-			m.input.Focus()
-			return m, nil
-		}
-		var cmd tea.Cmd
-		m.body, cmd = m.body.Update(msg)
-		return m, cmd
-
+		return m.handleInputBodyKey(msg)
 	case stateInputFooter:
-		if msg.Type == tea.KeyEnter {
-			m.footer = m.input.Value()
-			m.input.SetValue("")
-			m.state = stateConfirm
-			return m, nil
-		}
-		var cmd tea.Cmd
-		m.input, cmd = m.input.Update(msg)
-		return m, cmd
-
+		return m.handleInputFooterKey(msg)
 	case stateConfirm:
-		switch msg.String() {
-		case "y", "Y":
-			m.state = stateDone
-			return m, m.doCommit()
-		case "n", "N":
-			m.quitting = true
-			return m, tea.Quit
-		}
-		if msg.Type == tea.KeyEnter {
-			m.state = stateDone
-			return m, m.doCommit()
-		}
+		return m.handleConfirmKey(msg)
 	}
 
+	return m, nil
+}
+
+func (m Model) handleSelectTypeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.Type == tea.KeyEnter {
+		if i, ok := m.typeList.SelectedItem().(item); ok {
+			m.commitType = i.title
+			m.state = stateInputScope
+			m.input.Placeholder = "(optional) scope, press Enter to skip"
+			m.input.SetValue("")
+			m.input.Focus()
+		}
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.typeList, cmd = m.typeList.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleInputScopeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.Type == tea.KeyEnter {
+		m.scope = m.input.Value()
+		m.input.SetValue("")
+		m.state = stateAILoading
+		return m, m.startAIGeneration()
+	}
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleSelectMsgKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.Type == tea.KeyEnter {
+		if i, ok := m.msgList.SelectedItem().(item); ok {
+			switch i.title {
+			case "[Manual entry]":
+				m.state = stateInputMsg
+				m.input.Placeholder = m.subjectPlaceholder()
+				m.input.SetValue("")
+				m.input.Focus()
+			case "[Regenerate]":
+				m.state = stateAILoading
+				return m, m.startAIGeneration()
+			default:
+				m.err = nil
+				m.subject = i.title
+				m.state = stateSelectDetailMode
+				m.detailList.Select(1)
+			}
+		}
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.msgList, cmd = m.msgList.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleInputMsgKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.Type == tea.KeyCtrlR {
+		m.err = nil
+		m.state = stateAILoading
+		return m, m.startAIGeneration()
+	}
+	if msg.Type == tea.KeyEnter {
+		m.err = nil
+		m.subject = m.input.Value()
+		m.input.SetValue("")
+		m.state = stateSelectDetailMode
+		m.detailList.Select(1)
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleSelectDetailModeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.Type == tea.KeyCtrlR {
+		m.err = nil
+		m.state = stateDetailAILoading
+		return m, m.startAIDetailGeneration()
+	}
+	if msg.Type == tea.KeyEnter {
+		if i, ok := m.detailList.SelectedItem().(item); ok {
+			switch i.title {
+			case "[Skip]":
+				m.err = nil
+				m.bodyText = ""
+				m.footer = ""
+				m.state = stateConfirm
+				return m, nil
+			case "[Generate with AI]":
+				m.err = nil
+				m.state = stateDetailAILoading
+				return m, m.startAIDetailGeneration()
+			default:
+				m.err = nil
+				m.bodyText = ""
+				m.footer = ""
+				m.state = stateInputBody
+				m.body.SetValue("")
+				m.body.Focus()
+			}
+		}
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.detailList, cmd = m.detailList.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleInputBodyKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.Type == tea.KeyEsc {
+		m.bodyText = ""
+		m.state = stateInputFooter
+		m.input.Placeholder = "(optional) footer, press Enter to skip"
+		m.input.SetValue(m.footer)
+		m.input.Focus()
+		return m, nil
+	}
+	if msg.Type == tea.KeyTab {
+		m.bodyText = m.body.Value()
+		m.state = stateInputFooter
+		m.input.Placeholder = "(optional) footer, press Enter to skip"
+		m.input.SetValue(m.footer)
+		m.input.Focus()
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.body, cmd = m.body.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleInputFooterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.Type == tea.KeyEnter {
+		m.footer = m.input.Value()
+		m.input.SetValue("")
+		m.state = stateConfirm
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.Type == tea.KeyEsc {
+		m.state = stateInputFooter
+		m.input.Placeholder = "(optional) footer, press Enter to skip"
+		m.input.SetValue(m.footer)
+		m.input.Focus()
+		return m, nil
+	}
+	switch msg.String() {
+	case "y", "Y":
+		m.state = stateDone
+		return m, m.doCommit()
+	case "n", "N":
+		m.quitting = true
+		return m, tea.Quit
+	}
+	if msg.Type == tea.KeyEnter {
+		m.state = stateDone
+		return m, m.doCommit()
+	}
 	return m, nil
 }
 
@@ -403,6 +436,14 @@ func (m Model) updateChildren(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.detailList, cmd = m.detailList.Update(msg)
 	}
 	return m, cmd
+}
+
+func (m Model) startAIGeneration() tea.Cmd {
+	return tea.Batch(m.spin.Tick, m.generateAI())
+}
+
+func (m Model) startAIDetailGeneration() tea.Cmd {
+	return tea.Batch(m.spin.Tick, m.generateAIDetail())
 }
 
 func (m Model) generateAI() tea.Cmd {
@@ -480,100 +521,122 @@ func (m Model) View() string {
 	switch m.state {
 	case stateSelectType:
 		return m.typeList.View()
-
 	case stateInputScope:
-		return fmt.Sprintf(
-			"%s\n\n%s\n\n%s",
-			titleStyle.Render("Enter scope"),
-			m.input.View(),
-			helpStyle.Render("Enter to confirm • Ctrl+C to quit"),
-		)
-
+		return m.viewInputScope()
 	case stateAILoading:
-		return fmt.Sprintf(
-			"\n  %s Generating commit messages...\n\n%s",
-			m.spin.View(),
-			helpStyle.Render("Ctrl+C to quit"),
-		)
-
+		return m.viewAILoading()
 	case stateSelectMsg:
-		view := m.msgList.View()
-		if m.err != nil {
-			view = errorStyle.Render(fmt.Sprintf("AI error: %v\n\n", m.err)) + view
-		}
-		return view
-
+		return m.viewSelectMsg()
 	case stateInputMsg:
-		errMsg := ""
-		if m.err != nil {
-			errMsg = errorStyle.Render(fmt.Sprintf("AI error: %v\n\n", m.err))
-		}
-		return fmt.Sprintf(
-			"%s%s\n\n%s\n\n%s",
-			errMsg,
-			titleStyle.Render("Enter commit message"),
-			m.input.View(),
-			helpStyle.Render("Enter to confirm • Ctrl+R to retry AI • Ctrl+C to quit"),
-		)
-
+		return m.viewInputMsg()
 	case stateSelectDetailMode:
-		view := m.detailList.View()
-		if m.err != nil {
-			view = errorStyle.Render(fmt.Sprintf("AI error: %v\n\n", m.err)) + view
-		}
-		return view + "\n" + helpStyle.Render("Ctrl+R to retry AI • Ctrl+C to quit")
-
+		return m.viewSelectDetailMode()
 	case stateDetailAILoading:
 		return fmt.Sprintf(
 			"\n  %s Generating commit details...\n\n%s",
 			m.spin.View(),
 			helpStyle.Render("Ctrl+C to quit"),
 		)
-
 	case stateInputBody:
-		errMsg := ""
-		if m.err != nil {
-			errMsg = errorStyle.Render(fmt.Sprintf("AI error: %v\n\n", m.err))
-		}
-		return fmt.Sprintf(
-			"%s%s\n\n%s\n\n%s",
-			errMsg,
-			titleStyle.Render("Enter commit body (optional)"),
-			m.body.View(),
-			helpStyle.Render("Esc to skip • Tab to confirm • Ctrl+C to quit"),
-		)
-
+		return m.viewInputBody()
 	case stateInputFooter:
-		return fmt.Sprintf(
-			"%s\n\n%s\n\n%s",
-			titleStyle.Render("Enter commit footer (optional)"),
-			m.input.View(),
-			helpStyle.Render("Enter to confirm (empty to skip) • Ctrl+C to quit"),
-		)
-
+		return m.viewInputFooter()
 	case stateConfirm:
-		c := &commit.ConventionalCommit{
-			Type:    m.commitTypeForMessage(),
-			Scope:   m.scope,
-			Subject: m.subject,
-			Body:    m.bodyText,
-			Footer:  m.footer,
-		}
-		preview := m.service.BuildMessage(c)
-		helpText := "y/Enter to commit • n to abort • Ctrl+C to quit"
-		if m.dryRun {
-			helpText = "[DRY RUN] y/Enter to preview • n to abort • Ctrl+C to quit"
-		}
-		return fmt.Sprintf(
-			"%s\n\n%s\n\n%s",
-			titleStyle.Render("Confirm commit message"),
-			previewStyle.Render(preview),
-			helpStyle.Render(helpText),
-		)
-
+		return m.viewConfirm()
 	case stateDone:
 		return selectedStyle.Render("Committing...\n")
 	}
 
 	return ""
+}
+
+func (m Model) viewInputScope() string {
+	return fmt.Sprintf(
+		"%s\n\n%s\n\n%s",
+		titleStyle.Render("Enter scope"),
+		m.input.View(),
+		helpStyle.Render("Enter to confirm • Ctrl+C to quit"),
+	)
+}
+
+func (m Model) viewAILoading() string {
+	return fmt.Sprintf(
+		"\n  %s Generating commit messages...\n\n%s",
+		m.spin.View(),
+		helpStyle.Render("Ctrl+C to quit"),
+	)
+}
+
+func (m Model) viewSelectMsg() string {
+	view := m.msgList.View()
+	if m.err != nil {
+		view = errorStyle.Render(fmt.Sprintf("AI error: %v\n\n", m.err)) + view
+	}
+	return view + "\n" + helpStyle.Render("Enter to select • Ctrl+C to quit")
+}
+
+func (m Model) viewInputMsg() string {
+	errMsg := ""
+	if m.err != nil {
+		errMsg = errorStyle.Render(fmt.Sprintf("AI error: %v\n\n", m.err))
+	}
+	return fmt.Sprintf(
+		"%s%s\n\n%s\n\n%s",
+		errMsg,
+		titleStyle.Render("Enter commit message"),
+		m.input.View(),
+		helpStyle.Render("Enter to confirm • Ctrl+R to retry AI • Ctrl+C to quit"),
+	)
+}
+
+func (m Model) viewSelectDetailMode() string {
+	view := m.detailList.View()
+	if m.err != nil {
+		view = errorStyle.Render(fmt.Sprintf("AI error: %v\n\n", m.err)) + view
+	}
+	return view + "\n" + helpStyle.Render("Ctrl+R to retry AI • Ctrl+C to quit")
+}
+
+func (m Model) viewInputBody() string {
+	errMsg := ""
+	if m.err != nil {
+		errMsg = errorStyle.Render(fmt.Sprintf("AI error: %v\n\n", m.err))
+	}
+	return fmt.Sprintf(
+		"%s%s\n\n%s\n\n%s",
+		errMsg,
+		titleStyle.Render("Enter commit body (optional)"),
+		m.body.View(),
+		helpStyle.Render("Esc to skip • Tab to confirm • Ctrl+C to quit"),
+	)
+}
+
+func (m Model) viewInputFooter() string {
+	return fmt.Sprintf(
+		"%s\n\n%s\n\n%s",
+		titleStyle.Render("Enter commit footer (optional)"),
+		m.input.View(),
+		helpStyle.Render("Enter to confirm (empty to skip) • Ctrl+C to quit"),
+	)
+}
+
+func (m Model) viewConfirm() string {
+	c := &commit.ConventionalCommit{
+		Type:    m.commitTypeForMessage(),
+		Scope:   m.scope,
+		Subject: m.subject,
+		Body:    m.bodyText,
+		Footer:  m.footer,
+	}
+	preview := m.service.BuildMessage(c)
+	helpText := "y/Enter to commit • n to abort • Esc to edit footer • Ctrl+C to quit"
+	if m.dryRun {
+		helpText = "[DRY RUN] y/Enter to preview • n to abort • Esc to edit footer • Ctrl+C to quit"
+	}
+	return fmt.Sprintf(
+		"%s\n\n%s\n\n%s",
+		titleStyle.Render("Confirm commit message"),
+		previewStyle.Render(preview),
+		helpStyle.Render(helpText),
+	)
 }

@@ -8,44 +8,25 @@ import (
 )
 
 // CodexProvider calls the Codex CLI to generate commit messages.
-type CodexProvider struct {
-	model      string
-	candidates int
-	timeout    int
-	runner     execx.Runner
-}
+type CodexProvider struct{ cliProvider }
 
 // NewCodexProvider creates a CodexProvider from config.
 func NewCodexProvider(cfg *config.Config, runner execx.Runner) *CodexProvider {
-	return &CodexProvider{
+	return &CodexProvider{cliProvider{
+		cfg:        cliArgs{name: "codex", promptFlag: "exec", modelFlag: "--model"},
 		model:      cfg.Model,
 		candidates: cfg.Candidates,
 		timeout:    cfg.Timeout,
 		runner:     runner,
-	}
+	}}
 }
 
 func (p *CodexProvider) Name() string { return "codex" }
 
 func (p *CodexProvider) Generate(ctx context.Context, req GenerateRequest) ([]string, error) {
-	prompt := buildPrompt(req)
-	args := []string{"exec", prompt}
-	if p.model != "" {
-		args = append(args, "--model", p.model)
-	}
-	return runCLI(ctx, p.runner, "codex", args, p.timeout, p.candidates)
+	return p.generate(ctx, req)
 }
 
 func (p *CodexProvider) GenerateDetail(ctx context.Context, req GenerateRequest) (string, string, error) {
-	prompt := buildDetailPrompt(req)
-	args := []string{"exec", prompt}
-	if p.model != "" {
-		args = append(args, "--model", p.model)
-	}
-	output, err := runCLIOutput(ctx, p.runner, "codex", args, p.timeout)
-	if err != nil {
-		return "", "", err
-	}
-	body, footer := parseDetailOutput(output)
-	return body, footer, nil
+	return p.generateDetail(ctx, req)
 }
