@@ -2,23 +2,25 @@
 
 > Stage your changes, generate Conventional Commits with AI, pick one in a TUI.
 
+![demo](demo/demo.gif)
+
 ## Quick Start
 
 **1. Install**
 
-```console
+```bash
 go install github.com/hayatosc/git-cx@latest
 ```
 
 **2. Set your provider (example: Gemini)**
 
-```console
+```bash
 git config --global cx.provider gemini
 ```
 
 **3. Stage changes and run**
 
-```console
+```bash
 git add -A
 git cx
 ```
@@ -88,6 +90,14 @@ git cx --config examples/copilot.gitconfig
 git cx --config examples/claude.gitconfig
 git cx --config examples/codex.gitconfig
 git cx --config examples/api.gitconfig
+```
+
+```gitconfig
+[cx]
+  provider = gemini
+  model = gemini-2.5-flash
+  candidates = 3
+  timeout = 30
 ```
 
 ## Development
