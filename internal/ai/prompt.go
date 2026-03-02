@@ -7,6 +7,19 @@ import (
 
 const maxDiffLen = 4000
 
+// appendDiff appends a (possibly truncated) git diff block to base.
+func appendDiff(base, diff string) string {
+	truncated := len(diff) > maxDiffLen
+	if truncated {
+		diff = diff[:maxDiffLen]
+	}
+	base += fmt.Sprintf("\nGit diff:\n```\n%s\n```", diff)
+	if truncated {
+		base += "\n(diff truncated)"
+	}
+	return base
+}
+
 // buildPrompt constructs the prompt string sent to the AI provider.
 func buildPrompt(req GenerateRequest) string {
 	base := fmt.Sprintf(`You are a commit message generator. Based on the following git diff, generate %d commit message suggestions in Conventional Commits format.
@@ -35,17 +48,7 @@ Rules:
 		base += fmt.Sprintf("\nChanged files:\n%s\n", req.Stat)
 	}
 
-	diff := req.Diff
-	truncated := false
-	if len(diff) > maxDiffLen {
-		diff = diff[:maxDiffLen]
-		truncated = true
-	}
-	base += fmt.Sprintf("\nGit diff:\n```\n%s\n```", diff)
-	if truncated {
-		base += "\n(diff truncated)"
-	}
-	return base
+	return appendDiff(base, req.Diff)
 }
 
 // buildDetailPrompt constructs the prompt for body/footer generation.
@@ -77,17 +80,7 @@ Footer:
 		base += fmt.Sprintf("\nChanged files:\n%s\n", req.Stat)
 	}
 
-	diff := req.Diff
-	truncated := false
-	if len(diff) > maxDiffLen {
-		diff = diff[:maxDiffLen]
-		truncated = true
-	}
-	base += fmt.Sprintf("\nGit diff:\n```\n%s\n```", diff)
-	if truncated {
-		base += "\n(diff truncated)"
-	}
-	return base
+	return appendDiff(base, req.Diff)
 }
 
 // parseDetailOutput extracts body and footer from AI output.

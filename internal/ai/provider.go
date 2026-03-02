@@ -48,6 +48,45 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 	}
 }
 
+// cliArgs holds the CLI-specific configuration for a provider.
+type cliArgs struct {
+	name       string
+	promptFlag string
+	modelFlag  string
+}
+
+// cliProvider is a generic provider that delegates to an external CLI.
+type cliProvider struct {
+	cfg        cliArgs
+	model      string
+	candidates int
+	timeout    int
+	runner     execx.Runner
+}
+
+func (p *cliProvider) generate(ctx context.Context, req GenerateRequest) ([]string, error) {
+	prompt := buildPrompt(req)
+	args := []string{p.cfg.promptFlag, prompt}
+	if p.model != "" {
+		args = append(args, p.cfg.modelFlag, p.model)
+	}
+	return runCLI(ctx, p.runner, p.cfg.name, args, p.timeout, p.candidates)
+}
+
+func (p *cliProvider) generateDetail(ctx context.Context, req GenerateRequest) (string, string, error) {
+	prompt := buildDetailPrompt(req)
+	args := []string{p.cfg.promptFlag, prompt}
+	if p.model != "" {
+		args = append(args, p.cfg.modelFlag, p.model)
+	}
+	output, err := runCLIOutput(ctx, p.runner, p.cfg.name, args, p.timeout)
+	if err != nil {
+		return "", "", err
+	}
+	body, footer := parseDetailOutput(output)
+	return body, footer, nil
+}
+
 // runCLI executes name with args, returning parsed candidate lines.
 func runCLI(ctx context.Context, runner execx.Runner, name string, args []string, timeout, max int) ([]string, error) {
 	output, err := runCLIOutput(ctx, runner, name, args, timeout)
