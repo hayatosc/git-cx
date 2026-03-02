@@ -320,7 +320,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "y", "Y":
 			m.state = stateDone
 			return m, m.doCommit()
-		case "n", "N", "q":
+		case "n", "N":
 			m.quitting = true
 			return m, tea.Quit
 		}
@@ -547,7 +547,7 @@ func (m Model) View() string {
 			"%s\n\n%s\n\n%s",
 			titleStyle.Render("Confirm commit message"),
 			previewStyle.Render(preview),
-			helpStyle.Render("y/Enter to commit • n/q to abort • Ctrl+C to quit"),
+			helpStyle.Render("y/Enter to commit • n to abort • Ctrl+C to quit"),
 		)
 
 	case stateDone:
