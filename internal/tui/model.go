@@ -222,7 +222,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					m.err = nil
 					m.subject = i.title
 					m.state = stateSelectDetailMode
-					m.detailList.Select(0)
+					m.detailList.Select(1)
 				}
 			}
 			return m, nil
@@ -242,7 +242,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.subject = m.input.Value()
 			m.input.SetValue("")
 			m.state = stateSelectDetailMode
-			m.detailList.Select(0)
+			m.detailList.Select(1)
 			return m, nil
 		}
 		var cmd tea.Cmd
@@ -367,7 +367,7 @@ func (m Model) handleAIDetailResult(msg aiDetailResultMsg) (tea.Model, tea.Cmd) 
 	if msg.err != nil {
 		m.err = msg.err
 		m.state = stateSelectDetailMode
-		m.detailList.Select(0)
+		m.detailList.Select(1)
 		return m, nil
 	}
 
@@ -547,7 +547,7 @@ func (m Model) View() string {
 			"%s\n\n%s\n\n%s",
 			titleStyle.Render("Confirm commit message"),
 			previewStyle.Render(preview),
-			helpStyle.Render("y/Enter to commit • n to abort • Ctrl+C to quit"),
+			helpStyle.Render("y/Enter to commit • n/q to abort • Ctrl+C to quit"),
 		)
 
 	case stateDone:
