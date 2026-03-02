@@ -111,6 +111,86 @@ func TestConfigGetAllFromFile_NotSet(t *testing.T) {
 	}
 }
 
+func TestUnstagedDiff(t *testing.T) {
+	mock := &execx.MockRunner{
+		Results: map[string]execx.Result{
+			"git\x00diff\x00--no-color": {Stdout: "diff --git a/foo.go b/foo.go\n"},
+		},
+	}
+	runner := NewRunnerWithExecutor(mock)
+	got, err := runner.UnstagedDiff(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "diff --git a/foo.go b/foo.go" {
+		t.Fatalf("unexpected diff: %q", got)
+	}
+}
+
+func TestUnstagedDiff_NoChanges(t *testing.T) {
+	mock := &execx.MockRunner{
+		Results: map[string]execx.Result{
+			"git\x00diff\x00--no-color": {Stdout: "\n"},
+		},
+	}
+	runner := NewRunnerWithExecutor(mock)
+	got, err := runner.UnstagedDiff(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "" {
+		t.Fatalf("expected empty string, got %q", got)
+	}
+}
+
+func TestUnstagedStat(t *testing.T) {
+	mock := &execx.MockRunner{
+		Results: map[string]execx.Result{
+			"git\x00diff\x00--stat\x00--no-color": {Stdout: " foo.go | 1 +\n 1 file changed\n"},
+		},
+	}
+	runner := NewRunnerWithExecutor(mock)
+	got, err := runner.UnstagedStat(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got == "" {
+		t.Fatal("expected non-empty stat")
+	}
+}
+
+func TestLastCommitDiff(t *testing.T) {
+	mock := &execx.MockRunner{
+		Results: map[string]execx.Result{
+			"git\x00show\x00HEAD\x00--no-color": {Stdout: "commit abc\ndiff --git a/foo.go b/foo.go\n"},
+		},
+	}
+	runner := NewRunnerWithExecutor(mock)
+	got, err := runner.LastCommitDiff(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got == "" {
+		t.Fatal("expected non-empty diff")
+	}
+}
+
+func TestLastCommitStat(t *testing.T) {
+	mock := &execx.MockRunner{
+		Results: map[string]execx.Result{
+			"git\x00show\x00HEAD\x00--stat\x00--no-color\x00--format=": {Stdout: " foo.go | 2 +-\n 1 file changed\n"},
+		},
+	}
+	runner := NewRunnerWithExecutor(mock)
+	got, err := runner.LastCommitStat(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got == "" {
+		t.Fatal("expected non-empty stat")
+	}
+}
+
 func TestConfigListFromFile(t *testing.T) {
 	mock := &execx.MockRunner{
 		Results: map[string]execx.Result{

@@ -48,6 +48,42 @@ func (r Runner) StagedStat(ctx context.Context) (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
+// UnstagedDiff returns the unstaged diff output. Returns "" if no changes.
+func (r Runner) UnstagedDiff(ctx context.Context) (string, error) {
+	out, err := r.run(ctx, "git", "diff", "--no-color")
+	if err != nil {
+		return "", fmt.Errorf("git diff: %w", err)
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// UnstagedStat returns the --stat output of unstaged diff.
+func (r Runner) UnstagedStat(ctx context.Context) (string, error) {
+	out, err := r.run(ctx, "git", "diff", "--stat", "--no-color")
+	if err != nil {
+		return "", fmt.Errorf("git diff --stat: %w", err)
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// LastCommitDiff returns the diff of the most recent commit (git show HEAD).
+func (r Runner) LastCommitDiff(ctx context.Context) (string, error) {
+	out, err := r.run(ctx, "git", "show", "HEAD", "--no-color")
+	if err != nil {
+		return "", fmt.Errorf("git show HEAD: %w", err)
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// LastCommitStat returns the --stat of the most recent commit.
+func (r Runner) LastCommitStat(ctx context.Context) (string, error) {
+	out, err := r.run(ctx, "git", "show", "HEAD", "--stat", "--no-color", "--format=")
+	if err != nil {
+		return "", fmt.Errorf("git show HEAD --stat: %w", err)
+	}
+	return strings.TrimSpace(out), nil
+}
+
 // Commit executes `git commit -m <message>`.
 func (r Runner) Commit(ctx context.Context, message string) error {
 	_, err := r.run(ctx, "git", "commit", "-m", message)

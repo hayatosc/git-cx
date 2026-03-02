@@ -54,7 +54,10 @@ type aiDetailResultMsg struct {
 }
 
 // commitDoneMsg signals that git commit completed.
-type commitDoneMsg struct{ err error }
+type commitDoneMsg struct {
+	err     error
+	message string
+}
 
 // Model is the bubbletea model.
 type Model struct {
@@ -80,12 +83,15 @@ type Model struct {
 	err      error
 	quitting bool
 
+	dryRun    bool
+	dryRunMsg string
+
 	width  int
 	height int
 }
 
 // New creates a new TUI Model.
-func New(service *app.CommitService, diff, stat string) Model {
+func New(service *app.CommitService, diff, stat string, dryRun bool) Model {
 	// Type selector list
 	typeItems := make([]list.Item, len(commit.CommitTypes))
 	for i, t := range commit.CommitTypes {
@@ -129,6 +135,7 @@ func New(service *app.CommitService, diff, stat string) Model {
 		input:      inp,
 		body:       ta,
 		spin:       sp,
+		dryRun:     dryRun,
 	}
 }
 
@@ -166,6 +173,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.err = msg.err
 		}
+		m.dryRunMsg = msg.message
 		m.quitting = true
 		return m, tea.Quit
 	}
@@ -443,6 +451,9 @@ func (m Model) doCommit() tea.Cmd {
 			Footer:  m.footer,
 		}
 		msg := m.service.BuildMessage(c)
+		if m.dryRun {
+			return commitDoneMsg{message: msg}
+		}
 		err := m.service.Commit(context.Background(), msg)
 		return commitDoneMsg{err: err}
 	}
@@ -455,6 +466,12 @@ func (m Model) View() string {
 			return errorStyle.Render(fmt.Sprintf("Error: %v\n", m.err))
 		}
 		if m.state == stateDone {
+			if m.dryRun {
+				return fmt.Sprintf("%s\n\n%s\n",
+					titleStyle.Render("[DRY RUN] Commit message (not committed):"),
+					previewStyle.Render(m.dryRunMsg),
+				)
+			}
 			return selectedStyle.Render("Committed successfully!\n")
 		}
 		return dimStyle.Render("Aborted.\n")
@@ -543,11 +560,15 @@ func (m Model) View() string {
 			Footer:  m.footer,
 		}
 		preview := m.service.BuildMessage(c)
+		helpText := "y/Enter to commit • n to abort • Ctrl+C to quit"
+		if m.dryRun {
+			helpText = "[DRY RUN] y/Enter to preview • n to abort • Ctrl+C to quit"
+		}
 		return fmt.Sprintf(
 			"%s\n\n%s\n\n%s",
 			titleStyle.Render("Confirm commit message"),
 			previewStyle.Render(preview),
-			helpStyle.Render("y/Enter to commit • n to abort • Ctrl+C to quit"),
+			helpStyle.Render(helpText),
 		)
 
 	case stateDone:
