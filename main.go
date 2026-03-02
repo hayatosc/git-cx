@@ -94,18 +94,18 @@ func loadConfig(cmd *cobra.Command, runner git.Runner) (*config.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, apply := range []error{
-		applyStringFlag(flags, "provider", &cfg.Provider),
-		applyStringFlag(flags, "model", &cfg.Model),
-		applyIntFlag(flags, "candidates", &cfg.Candidates),
-		applyIntFlag(flags, "timeout", &cfg.Timeout),
-		applyStringFlag(flags, "command", &cfg.Command),
-		applyStringFlag(flags, "api-base-url", &cfg.API.BaseURL),
-		applyBoolFlag(flags, "use-emoji", &cfg.Commit.UseEmoji),
-		applyIntFlag(flags, "max-subject-length", &cfg.Commit.MaxSubjectLength),
+	for _, fn := range []func() error{
+		func() error { return applyStringFlag(flags, "provider", &cfg.Provider) },
+		func() error { return applyStringFlag(flags, "model", &cfg.Model) },
+		func() error { return applyIntFlag(flags, "candidates", &cfg.Candidates) },
+		func() error { return applyIntFlag(flags, "timeout", &cfg.Timeout) },
+		func() error { return applyStringFlag(flags, "command", &cfg.Command) },
+		func() error { return applyStringFlag(flags, "api-base-url", &cfg.API.BaseURL) },
+		func() error { return applyBoolFlag(flags, "use-emoji", &cfg.Commit.UseEmoji) },
+		func() error { return applyIntFlag(flags, "max-subject-length", &cfg.Commit.MaxSubjectLength) },
 	} {
-		if apply != nil {
-			return nil, apply
+		if err := fn(); err != nil {
+			return nil, err
 		}
 	}
 	return cfg, cfg.Validate()
