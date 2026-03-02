@@ -36,6 +36,7 @@ func main() {
 	root.PersistentFlags().String("api-base-url", "", "base URL for api provider")
 	root.PersistentFlags().Bool("use-emoji", false, "prefix commit type with emoji")
 	root.PersistentFlags().Int("max-subject-length", 0, "max length of commit subject line")
+	root.PersistentFlags().Bool("dry-run", false, "preview commit message without actually committing")
 
 	root.AddCommand(newConfigCmd())
 	root.AddCommand(newVersionCmd())
@@ -129,17 +130,28 @@ func runCommit(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to initialize AI provider: %w", err)
 	}
 
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+
 	commitService := app.NewCommitService(cfg, provider, gitRunner)
 	diff, stat, err := commitService.StagedChanges(ctx)
 	if err != nil {
 		if errors.Is(err, git.ErrNoStagedChanges) {
-			fmt.Fprintln(os.Stderr, "Error: no staged changes. Run 'git add' first.")
-			os.Exit(1)
+			if !dryRun {
+				fmt.Fprintln(os.Stderr, "Error: no staged changes. Run 'git add' first.")
+				os.Exit(1)
+			}
+			diff, _ = gitRunner.UnstagedDiff(ctx)
+			stat, _ = gitRunner.UnstagedStat(ctx)
+			if strings.TrimSpace(diff) == "" {
+				diff, _ = gitRunner.LastCommitDiff(ctx)
+				stat, _ = gitRunner.LastCommitStat(ctx)
+			}
+		} else {
+			return fmt.Errorf("failed to get staged diff: %w", err)
 		}
-		return fmt.Errorf("failed to get staged diff: %w", err)
 	}
 
-	m := tui.New(commitService, diff, stat)
+	m := tui.New(commitService, diff, stat, dryRun)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("TUI error: %w", err)
