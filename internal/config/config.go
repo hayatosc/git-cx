@@ -20,6 +20,7 @@ type Config struct {
 	Command    string // for custom provider: supports {prompt} placeholder
 	API        APIConfig
 	Commit     CommitConfig
+	Providers  []string
 }
 
 // APIConfig holds API provider settings.
@@ -61,6 +62,9 @@ func loadBase(ctx context.Context, runner git.Runner) *Config {
 
 	if v := runner.ConfigGet(ctx, "cx.provider"); v != "" {
 		cfg.Provider = v
+	}
+	if providers := runner.ConfigGetAll(ctx, "cx.providers"); len(providers) > 0 {
+		cfg.Providers = providers
 	}
 	if v := runner.ConfigGet(ctx, "cx.model"); v != "" {
 		cfg.Model = v
@@ -105,10 +109,27 @@ func loadBase(ctx context.Context, runner git.Runner) *Config {
 
 // Validate checks config values for consistency.
 func (c *Config) Validate() error {
-	switch c.Provider {
-	case "gemini", "copilot", "claude", "codex", "api", "custom":
-	default:
+	validProviders := map[string]struct{}{
+		"gemini":  {},
+		"copilot": {},
+		"claude":  {},
+		"codex":   {},
+		"api":     {},
+		"custom":  {},
+	}
+
+	if c.Provider == "" {
+		return fmt.Errorf("provider is not set (set via 'git config cx.provider PROVIDER')")
+	}
+	if _, ok := validProviders[c.Provider]; !ok {
 		return fmt.Errorf("unknown provider: %q (valid providers: gemini, copilot, claude, codex, api, custom; set via 'git config cx.provider PROVIDER')", c.Provider)
+	}
+
+	c.Providers = normalizeProviders(c.Providers, c.Provider)
+	for _, p := range c.Providers {
+		if _, ok := validProviders[p]; !ok {
+			return fmt.Errorf("unknown provider in cx.providers: %q (valid providers: gemini, copilot, claude, codex, api, custom)", p)
+		}
 	}
 	if c.Candidates <= 0 {
 		return fmt.Errorf("candidates must be greater than 0")
@@ -134,6 +155,26 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("commit.maxSubjectLength must be >= 0")
 	}
 	return nil
+}
+
+func normalizeProviders(list []string, primary string) []string {
+	seen := map[string]bool{}
+	var result []string
+
+	if trimmed := strings.TrimSpace(primary); trimmed != "" {
+		result = append(result, trimmed)
+		seen[trimmed] = true
+	}
+
+	for _, p := range list {
+		trimmed := strings.TrimSpace(p)
+		if trimmed == "" || seen[trimmed] {
+			continue
+		}
+		result = append(result, trimmed)
+		seen[trimmed] = true
+	}
+	return result
 }
 
 func validateBaseURL(raw string) error {

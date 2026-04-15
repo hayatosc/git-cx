@@ -15,11 +15,23 @@ import (
 )
 
 func newTestService(mock *execx.MockRunner) *app.CommitService {
-	return app.NewCommitService(
-		&config.Config{Candidates: 1, Commit: config.CommitConfig{}},
-		&ai.MockProvider{Candidates: []string{"feat: test"}},
-		git.NewRunnerWithExecutor(mock),
-	)
+	cfg := &config.Config{Provider: "mock", Candidates: 1, Commit: config.CommitConfig{}, Providers: []string{"mock"}}
+	provider := &ai.MockProvider{NameValue: "mock", Candidates: []string{"feat: test"}}
+	return app.NewCommitService(cfg, map[string]ai.Provider{"mock": provider}, "mock", git.NewRunnerWithExecutor(mock))
+}
+
+func newMultiProviderService() *app.CommitService {
+	cfg := &config.Config{
+		Provider:   "first",
+		Providers:  []string{"first", "second"},
+		Candidates: 1,
+		Commit:     config.CommitConfig{},
+	}
+	providers := map[string]ai.Provider{
+		"first":  &ai.MockProvider{NameValue: "first", Candidates: []string{"feat: first"}},
+		"second": &ai.MockProvider{NameValue: "second", Candidates: []string{"feat: second"}},
+	}
+	return app.NewCommitService(cfg, providers, "first", git.NewRunnerWithExecutor(&execx.MockRunner{}))
 }
 
 func newModel(dryRun bool) Model {
@@ -154,6 +166,26 @@ func TestHandleKey_inputMsg_enter_advancesToSelectDetailMode(t *testing.T) {
 	}
 	if next.subject != "add feature" {
 		t.Errorf("expected subject 'add feature', got %q", next.subject)
+	}
+}
+
+func TestHandleKey_inputMsg_ctrlP_opensProviderSelection(t *testing.T) {
+	m := New(newMultiProviderService(), "diff", "stat", false)
+	m.state = stateInputMsg
+
+	result, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyCtrlP})
+	next := result.(Model)
+	if next.state != stateSelectProvider {
+		t.Fatalf("expected stateSelectProvider, got %v", next.state)
+	}
+	next.providerList.Select(1)
+	result, _ = next.handleSelectProviderKey(pressEnter())
+	final := result.(Model)
+	if final.state != stateAILoading {
+		t.Fatalf("expected to start AI loading, got %v", final.state)
+	}
+	if final.providerName != "second" {
+		t.Fatalf("expected provider 'second', got %q", final.providerName)
 	}
 }
 

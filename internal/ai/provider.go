@@ -30,7 +30,12 @@ type GenerateRequest struct {
 
 // NewProvider returns the appropriate Provider based on config.
 func NewProvider(cfg *config.Config) (Provider, error) {
-	switch cfg.Provider {
+	return NewProviderWithName(cfg.Provider, cfg)
+}
+
+// NewProviderWithName returns the Provider for the given name using cfg.
+func NewProviderWithName(name string, cfg *config.Config) (Provider, error) {
+	switch name {
 	case "gemini":
 		return NewGeminiProvider(cfg, execx.DefaultRunner{}), nil
 	case "copilot":
@@ -44,7 +49,7 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 	case "custom":
 		return NewCustomProvider(cfg, execx.DefaultRunner{}), nil
 	default:
-		return nil, fmt.Errorf("unknown provider: %q (set cx.provider to gemini, copilot, claude, codex, api, or custom)", cfg.Provider)
+		return nil, fmt.Errorf("unknown provider: %q (set cx.provider to gemini, copilot, claude, codex, api, or custom)", name)
 	}
 }
 

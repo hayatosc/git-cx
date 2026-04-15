@@ -34,6 +34,7 @@ git cx
 | Input Scope / Footer | `Enter` | Next |
 | Input Body | `Ctrl+D` | Done |
 | Input Body | `Enter` (empty) | Skip |
+| Message / Detail | `Ctrl+P` | Switch AI provider |
 | Confirm | `y` | Commit |
 | Confirm | `n` / `q` | Abort |
 
@@ -48,6 +49,8 @@ git cx
 | `api` | OpenAI-compatible endpoint + API key | `cx.apiBaseUrl` + `OPENAI_API_KEY` |
 | `custom` | Any CLI with stdout output | `cx.command = "mycli --prompt {prompt}"` |
 
+Set multiple providers with `cx.providers` (or `--providers`) to switch between them in the TUI with `Ctrl+P`.
+
 ## Configuration
 
 All options can be set via `git config`, a config file (`--config`), or flags per invocation.
@@ -57,6 +60,7 @@ All options can be set via `git config`, a config file (`--config`), or flags pe
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `cx.provider` | string | `gemini` | AI provider |
+| `cx.providers` | string (multi) | `cx.provider` | Additional AI providers to offer in the TUI (first entry is used by default when `cx.provider` is not set) |
 | `cx.model` | string | — | Model name |
 | `cx.candidates` | int | `3` | Number of candidates |
 | `cx.timeout` | int | `30` | Request timeout (seconds) |
@@ -74,6 +78,7 @@ All options can be set via `git config`, a config file (`--config`), or flags pe
 |---|---|
 | `--config <path>` | gitconfig-format config file |
 | `--provider <name>` | AI provider |
+| `--providers <names>` | Comma-separated AI providers to enable (first is default unless `--provider` is set) |
 | `--model <name>` | Model name |
 | `--candidates <n>` | Number of candidates |
 | `--timeout <n>` | Timeout in seconds |

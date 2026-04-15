@@ -13,12 +13,9 @@ import (
 )
 
 func TestCommitService_GenerateCandidates(t *testing.T) {
-	provider := &ai.MockProvider{Candidates: []string{"feat: ok"}}
-	service := NewCommitService(
-		&config.Config{Candidates: 1, Commit: config.CommitConfig{}},
-		provider,
-		git.NewRunnerWithExecutor(&execx.MockRunner{}),
-	)
+	provider := &ai.MockProvider{NameValue: "mock", Candidates: []string{"feat: ok"}}
+	cfg := &config.Config{Provider: "mock", Candidates: 1, Commit: config.CommitConfig{}, Providers: []string{"mock"}}
+	service := NewCommitService(cfg, map[string]ai.Provider{"mock": provider}, "mock", git.NewRunnerWithExecutor(&execx.MockRunner{}))
 
 	got, err := service.GenerateCandidates(context.Background(), "diff", "stat", "feat", "core")
 	if err != nil {
@@ -33,12 +30,9 @@ func TestCommitService_GenerateCandidates(t *testing.T) {
 }
 
 func TestCommitService_GenerateDetails(t *testing.T) {
-	provider := &ai.MockProvider{Body: "body", Footer: "footer"}
-	service := NewCommitService(
-		&config.Config{Candidates: 1, Commit: config.CommitConfig{}},
-		provider,
-		git.NewRunnerWithExecutor(&execx.MockRunner{}),
-	)
+	provider := &ai.MockProvider{NameValue: "mock", Body: "body", Footer: "footer"}
+	cfg := &config.Config{Provider: "mock", Candidates: 1, Commit: config.CommitConfig{}, Providers: []string{"mock"}}
+	service := NewCommitService(cfg, map[string]ai.Provider{"mock": provider}, "mock", git.NewRunnerWithExecutor(&execx.MockRunner{}))
 
 	body, footer, err := service.GenerateDetails(context.Background(), "diff", "stat", "feat", "core", "add")
 	if err != nil {
@@ -53,11 +47,8 @@ func TestCommitService_GenerateDetails(t *testing.T) {
 }
 
 func TestCommitService_CommitEmptyMessage(t *testing.T) {
-	service := NewCommitService(
-		&config.Config{Candidates: 1, Commit: config.CommitConfig{}},
-		&ai.MockProvider{},
-		git.NewRunnerWithExecutor(&execx.MockRunner{}),
-	)
+	cfg := &config.Config{Provider: "mock", Candidates: 1, Commit: config.CommitConfig{}, Providers: []string{"mock"}}
+	service := NewCommitService(cfg, map[string]ai.Provider{"mock": &ai.MockProvider{NameValue: "mock"}}, "mock", git.NewRunnerWithExecutor(&execx.MockRunner{}))
 
 	_, err := service.Commit(context.Background(), " ")
 	if err == nil {
@@ -66,11 +57,8 @@ func TestCommitService_CommitEmptyMessage(t *testing.T) {
 }
 
 func TestCommitService_BuildMessage(t *testing.T) {
-	service := NewCommitService(
-		&config.Config{Candidates: 1, Commit: config.CommitConfig{UseEmoji: false, MaxSubjectLength: 72}},
-		&ai.MockProvider{},
-		git.NewRunnerWithExecutor(&execx.MockRunner{}),
-	)
+	cfg := &config.Config{Provider: "mock", Candidates: 1, Commit: config.CommitConfig{UseEmoji: false, MaxSubjectLength: 72}, Providers: []string{"mock"}}
+	service := NewCommitService(cfg, map[string]ai.Provider{"mock": &ai.MockProvider{NameValue: "mock"}}, "mock", git.NewRunnerWithExecutor(&execx.MockRunner{}))
 
 	msg := service.BuildMessage(&commit.ConventionalCommit{Type: "chore", Subject: "update"})
 	if msg != "chore: update" {
@@ -84,11 +72,8 @@ func TestCommitService_CommitPropagatesError(t *testing.T) {
 			"git\x00commit\x00-m\x00msg": errors.New("fail"),
 		},
 	}
-	service := NewCommitService(
-		&config.Config{Candidates: 1, Commit: config.CommitConfig{}},
-		&ai.MockProvider{},
-		git.NewRunnerWithExecutor(mock),
-	)
+	cfg := &config.Config{Provider: "mock", Candidates: 1, Commit: config.CommitConfig{}, Providers: []string{"mock"}}
+	service := NewCommitService(cfg, map[string]ai.Provider{"mock": &ai.MockProvider{NameValue: "mock"}}, "mock", git.NewRunnerWithExecutor(mock))
 	_, err := service.Commit(context.Background(), "msg")
 	if err == nil {
 		t.Fatalf("expected error")

@@ -24,6 +24,9 @@ func TestLoadWithFile_GitConfigFormatOverrides(t *testing.T) {
 	if cfg.Provider != "copilot" || cfg.Model != "gpt-4o" {
 		t.Fatalf("unexpected provider/model: %s/%s", cfg.Provider, cfg.Model)
 	}
+	if len(cfg.Providers) != 1 || cfg.Providers[0] != "copilot" {
+		t.Fatalf("unexpected providers: %#v", cfg.Providers)
+	}
 	if cfg.Candidates != 5 || cfg.Timeout != 45 {
 		t.Fatalf("unexpected candidates/timeout: %d/%d", cfg.Candidates, cfg.Timeout)
 	}
@@ -32,6 +35,31 @@ func TestLoadWithFile_GitConfigFormatOverrides(t *testing.T) {
 	}
 	if len(cfg.Commit.Scopes) != 2 || cfg.Commit.Scopes[0] != "core" || cfg.Commit.Scopes[1] != "cli" {
 		t.Fatalf("unexpected scopes: %#v", cfg.Commit.Scopes)
+	}
+}
+
+func TestLoadWithFile_ProvidersList(t *testing.T) {
+	mock := &execx.MockRunner{
+		Results: map[string]execx.Result{
+			"git\x00config\x00--file\x00/tmp/cx.conf\x00--list": {Stdout: "cx.provider=copilot\ncx.providers=gemini\ncx.providers=copilot\ncx.candidates=2\ncx.timeout=10\n"},
+		},
+	}
+
+	cfg, err := LoadWithFile(context.Background(), git.NewRunnerWithExecutor(mock), "/tmp/cx.conf")
+	if err != nil {
+		t.Fatalf("LoadWithFile error: %v", err)
+	}
+	expected := []string{"copilot", "gemini"}
+	if len(cfg.Providers) != len(expected) {
+		t.Fatalf("unexpected providers length: %#v", cfg.Providers)
+	}
+	for i, p := range expected {
+		if cfg.Providers[i] != p {
+			t.Fatalf("unexpected providers order: %#v", cfg.Providers)
+		}
+	}
+	if cfg.Provider != "copilot" {
+		t.Fatalf("unexpected provider: %s", cfg.Provider)
 	}
 }
 

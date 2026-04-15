@@ -41,6 +41,9 @@ func ApplyGitConfigFile(ctx context.Context, runner git.Runner, cfg *Config, pat
 	if v := getFirstConfigValue(entries, "cx.provider"); v != "" {
 		cfg.Provider = v
 	}
+	if providers := getAllConfigValues(entries, "cx.providers"); len(providers) > 0 {
+		cfg.Providers = providers
+	}
 	if v := getFirstConfigValue(entries, "cx.model"); v != "" {
 		cfg.Model = v
 	}
