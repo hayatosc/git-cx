@@ -26,7 +26,7 @@ func newModel(dryRun bool) Model {
 	return New(newTestService(&execx.MockRunner{}), "diff", "stat", dryRun)
 }
 
-func pressEnter() tea.KeyMsg  { return tea.KeyMsg{Type: tea.KeyEnter} }
+func pressEnter() tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyEnter} }
 func pressKey(r rune) tea.KeyMsg {
 	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}}
 }
@@ -256,6 +256,16 @@ func TestUpdate_commitDoneMsg_success(t *testing.T) {
 	}
 	if !next.quitting {
 		t.Error("expected quitting=true")
+	}
+}
+
+func TestUpdate_commitDoneMsg_setsLogOutput(t *testing.T) {
+	m := newModel(false)
+	output := "stdout\nstderr"
+	result, _ := m.Update(commitDoneMsg{output: output})
+	next := result.(Model)
+	if next.LogOutput() != output {
+		t.Fatalf("expected log output %q, got %q", output, next.LogOutput())
 	}
 }
 

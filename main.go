@@ -167,7 +167,7 @@ func runCommit(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("TUI error: %w", err)
 	}
-	if final, ok := result.(tui.Model); ok {
+	if final, ok := result.(tui.Model); ok && hookMode {
 		if out := strings.TrimSpace(final.LogOutput()); out != "" {
 			fmt.Fprintln(os.Stderr, out)
 		}
