@@ -20,6 +20,12 @@ import (
 
 var version = "dev"
 
+// inGitHook reports whether git-cx is being invoked from a Git hook by
+// checking Git-provided environment variables.
+func inGitHook() bool {
+	return os.Getenv("GIT_DIR") != "" && os.Getenv("GIT_INDEX_FILE") != ""
+}
+
 func main() {
 	root := &cobra.Command{
 		Use:   "git cx",
@@ -147,7 +153,16 @@ func runCommit(cmd *cobra.Command, _ []string) error {
 	}
 
 	m := tui.New(commitService, diff, stat, dryRun)
-	p := tea.NewProgram(m, tea.WithAltScreen())
+
+	hookMode := inGitHook()
+	opts := []tea.ProgramOption{}
+	if !hookMode {
+		opts = append(opts, tea.WithAltScreen())
+	} else {
+		fmt.Fprintln(os.Stderr, "git-cx: detected git hook environment, keeping output on the main screen.")
+	}
+
+	p := tea.NewProgram(m, opts...)
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("TUI error: %w", err)
 	}

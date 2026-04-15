@@ -100,6 +100,10 @@ git cx --config examples/api.gitconfig
   timeout = 30
 ```
 
+## Git hooks
+
+When git-cx runs from a Git hook (detected via Git-provided `GIT_DIR` and `GIT_INDEX_FILE` env vars), it keeps the UI on the main screen so hook logs stay visible. Normal runs still use the alt screen TUI.
+
 ## Development
 
 ```console
