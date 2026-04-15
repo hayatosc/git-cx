@@ -84,10 +84,21 @@ func (r Runner) LastCommitStat(ctx context.Context) (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
+func joinOutput(stdout, stderr string) string {
+	switch {
+	case stdout == "":
+		return stderr
+	case stderr == "":
+		return stdout
+	default:
+		return stdout + "\n" + stderr
+	}
+}
+
 // Commit executes `git commit -m <message>` and returns combined output.
 func (r Runner) Commit(ctx context.Context, message string) (string, error) {
 	result, err := r.runner.Run(ctx, "git", "commit", "-m", message)
-	output := strings.TrimSpace(result.Stdout + result.Stderr)
+	output := strings.TrimSpace(joinOutput(result.Stdout, result.Stderr))
 	if err != nil {
 		msg := strings.TrimSpace(result.Stderr)
 		if msg == "" {
