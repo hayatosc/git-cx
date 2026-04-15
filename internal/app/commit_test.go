@@ -59,7 +59,7 @@ func TestCommitService_CommitEmptyMessage(t *testing.T) {
 		git.NewRunnerWithExecutor(&execx.MockRunner{}),
 	)
 
-	err := service.Commit(context.Background(), " ")
+	_, err := service.Commit(context.Background(), " ")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -89,7 +89,7 @@ func TestCommitService_CommitPropagatesError(t *testing.T) {
 		&ai.MockProvider{},
 		git.NewRunnerWithExecutor(mock),
 	)
-	err := service.Commit(context.Background(), "msg")
+	_, err := service.Commit(context.Background(), "msg")
 	if err == nil {
 		t.Fatalf("expected error")
 	}

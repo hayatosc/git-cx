@@ -67,12 +67,9 @@ func (s *CommitService) BuildMessage(c *commit.ConventionalCommit) string {
 }
 
 // Commit executes git commit.
-func (s *CommitService) Commit(ctx context.Context, message string) error {
+func (s *CommitService) Commit(ctx context.Context, message string) (string, error) {
 	if strings.TrimSpace(message) == "" {
-		return errors.New("commit message is empty")
+		return "", errors.New("commit message is empty")
 	}
-	if err := s.git.Commit(ctx, message); err != nil {
-		return err
-	}
-	return nil
+	return s.git.Commit(ctx, message)
 }

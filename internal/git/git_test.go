@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hayatosc/git-cx/internal/execx"
@@ -208,4 +209,50 @@ func TestConfigListFromFile(t *testing.T) {
 	if len(got["cx.commit.scopes"]) != 2 || got["cx.commit.scopes"][0] != "core" || got["cx.commit.scopes"][1] != "cli" {
 		t.Fatalf("unexpected scopes: %#v", got["cx.commit.scopes"])
 	}
+}
+
+func TestCommit_success_returnsCombinedOutput(t *testing.T) {
+	runner := NewRunnerWithExecutor(stubRunner{
+		result: execx.Result{Stdout: "created", Stderr: "hook log"},
+	})
+	out, err := runner.Commit(context.Background(), "feat: ok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out != "created\nhook log" {
+		t.Fatalf("unexpected output: %q", out)
+	}
+}
+
+func TestCommit_error_includesOutputAndMessage(t *testing.T) {
+	runner := NewRunnerWithExecutor(stubRunner{
+		result: execx.Result{Stderr: "lint failed\n"},
+		err:    errors.New("exit status 1"),
+	})
+	out, err := runner.Commit(context.Background(), "feat: fail")
+	if out != "lint failed" {
+		t.Fatalf("unexpected output: %q", out)
+	}
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "git commit:") {
+		t.Fatalf("expected git commit prefix, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "lint failed") {
+		t.Fatalf("expected stderr content, got: %v", err)
+	}
+}
+
+type stubRunner struct {
+	result execx.Result
+	err    error
+}
+
+func (s stubRunner) Run(ctx context.Context, name string, args ...string) (execx.Result, error) {
+	return s.result, s.err
+}
+
+func (s stubRunner) RunShell(ctx context.Context, command string) (execx.Result, error) {
+	return s.Run(ctx, "sh", "-c", command)
 }
