@@ -163,8 +163,14 @@ func runCommit(cmd *cobra.Command, _ []string) error {
 	}
 
 	p := tea.NewProgram(m, opts...)
-	if _, err := p.Run(); err != nil {
+	result, err := p.Run()
+	if err != nil {
 		return fmt.Errorf("TUI error: %w", err)
+	}
+	if final, ok := result.(tui.Model); ok {
+		if out := strings.TrimSpace(final.LogOutput()); out != "" {
+			fmt.Fprintln(os.Stderr, out)
+		}
 	}
 	return nil
 }

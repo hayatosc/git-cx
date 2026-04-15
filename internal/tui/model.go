@@ -57,6 +57,7 @@ type aiDetailResultMsg struct {
 type commitDoneMsg struct {
 	err     error
 	message string
+	output  string
 }
 
 // Model is the bubbletea model.
@@ -85,6 +86,7 @@ type Model struct {
 
 	dryRun    bool
 	dryRunMsg string
+	logOutput string
 
 	width  int
 	height int
@@ -139,6 +141,11 @@ func New(service *app.CommitService, diff, stat string, dryRun bool) Model {
 	}
 }
 
+// LogOutput returns git commit output (stdout+stderr) if available.
+func (m Model) LogOutput() string {
+	return m.logOutput
+}
+
 func (m Model) Init() tea.Cmd {
 	return m.spin.Tick
 }
@@ -174,6 +181,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = msg.err
 		}
 		m.dryRunMsg = msg.message
+		m.logOutput = msg.output
 		m.quitting = true
 		return m, tea.Quit
 	}
@@ -495,8 +503,8 @@ func (m Model) doCommit() tea.Cmd {
 		if m.dryRun {
 			return commitDoneMsg{message: msg}
 		}
-		err := m.service.Commit(context.Background(), msg)
-		return commitDoneMsg{err: err}
+		out, err := m.service.Commit(context.Background(), msg)
+		return commitDoneMsg{output: out, err: err}
 	}
 }
 
