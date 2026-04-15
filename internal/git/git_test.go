@@ -250,13 +250,9 @@ type stubRunner struct {
 }
 
 func (s stubRunner) Run(ctx context.Context, name string, args ...string) (execx.Result, error) {
-	_ = ctx
-	_ = name
-	_ = args
 	return s.result, s.err
 }
 
 func (s stubRunner) RunShell(ctx context.Context, command string) (execx.Result, error) {
-	_ = command
 	return s.Run(ctx, "sh", "-c", command)
 }
