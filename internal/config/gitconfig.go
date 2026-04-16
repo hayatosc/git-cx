@@ -68,6 +68,10 @@ func ApplyGitConfigFile(ctx context.Context, runner git.Runner, cfg *Config, pat
 		cfg.API.BaseURL = v
 	}
 
+	if err := applyProviderOverridesFromEntries(cfg, entries); err != nil {
+		return err
+	}
+
 	if v := getFirstConfigValue(entries, "cx.commit.useEmoji"); v != "" {
 		b, err := parseBoolConfig("cx.commit.useEmoji", v)
 		if err != nil {
@@ -112,4 +116,52 @@ func parseBoolConfig(key, value string) (bool, error) {
 		return false, fmt.Errorf("invalid %s %q: expected true/false/on/off/yes/no", key, trimmed)
 	}
 	return b, nil
+}
+
+func applyProviderOverridesFromEntries(cfg *Config, entries map[string][]string) error {
+	if cfg.ProviderOptions == nil {
+		cfg.ProviderOptions = map[string]ProviderConfig{}
+	}
+	for key, values := range entries {
+		const prefix = "cx.providers."
+		if !strings.HasPrefix(key, prefix) {
+			continue
+		}
+		rest := strings.TrimPrefix(key, prefix)
+		parts := strings.SplitN(rest, ".", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		name, field := parts[0], parts[1]
+		if name == "" || len(values) == 0 {
+			continue
+		}
+		value := values[0]
+		pc := cfg.ProviderOptions[name]
+		switch field {
+		case "model":
+			pc.Model = value
+		case "candidates":
+			n, err := parseIntConfig(key, value)
+			if err != nil {
+				return err
+			}
+			pc.Candidates = n
+		case "timeout":
+			n, err := parseIntConfig(key, value)
+			if err != nil {
+				return err
+			}
+			pc.Timeout = n
+		case "command":
+			pc.Command = value
+		case "apiBaseUrl":
+			pc.APIBaseURL = value
+		default:
+		}
+		if hasProviderConfig(pc) {
+			cfg.ProviderOptions[name] = pc
+		}
+	}
+	return nil
 }

@@ -41,7 +41,7 @@ func TestLoadWithFile_GitConfigFormatOverrides(t *testing.T) {
 func TestLoadWithFile_ProvidersList(t *testing.T) {
 	mock := &execx.MockRunner{
 		Results: map[string]execx.Result{
-			"git\x00config\x00--file\x00/tmp/cx.conf\x00--list": {Stdout: "cx.provider=copilot\ncx.providers=gemini\ncx.providers=copilot\ncx.candidates=2\ncx.timeout=10\n"},
+			"git\x00config\x00--file\x00/tmp/cx.conf\x00--list": {Stdout: "cx.provider=copilot\ncx.providers=gemini\ncx.providers=copilot\ncx.providers.gemini.model=gemini-special\ncx.providers.gemini.timeout=45\ncx.providers.copilot.model=gpt-4o-mini\ncx.candidates=2\ncx.timeout=10\n"},
 		},
 	}
 
@@ -60,6 +60,14 @@ func TestLoadWithFile_ProvidersList(t *testing.T) {
 	}
 	if cfg.Provider != "copilot" {
 		t.Fatalf("unexpected provider: %s", cfg.Provider)
+	}
+	pcGemini := cfg.ProviderConfig("gemini")
+	if pcGemini.Model != "gemini-special" || pcGemini.Timeout != 45 {
+		t.Fatalf("unexpected gemini provider config: %+v", pcGemini)
+	}
+	pcCopilot := cfg.ProviderConfig("copilot")
+	if pcCopilot.Model != "gpt-4o-mini" || pcCopilot.Timeout != 10 || pcCopilot.Candidates != 2 {
+		t.Fatalf("unexpected copilot provider config: %+v", pcCopilot)
 	}
 }
 

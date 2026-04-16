@@ -35,19 +35,20 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 
 // NewProviderWithName returns the Provider for the given name using cfg.
 func NewProviderWithName(name string, cfg *config.Config) (Provider, error) {
+	pc := cfg.ProviderConfig(name)
 	switch name {
 	case "gemini":
-		return NewGeminiProvider(cfg, execx.DefaultRunner{}), nil
+		return NewGeminiProvider(pc, execx.DefaultRunner{}), nil
 	case "copilot":
-		return NewCopilotProvider(cfg, execx.DefaultRunner{}), nil
+		return NewCopilotProvider(pc, execx.DefaultRunner{}), nil
 	case "claude":
-		return NewClaudeProvider(cfg, execx.DefaultRunner{}), nil
+		return NewClaudeProvider(pc, execx.DefaultRunner{}), nil
 	case "codex":
-		return NewCodexProvider(cfg, execx.DefaultRunner{}), nil
+		return NewCodexProvider(pc, execx.DefaultRunner{}), nil
 	case "api":
-		return NewAPIProvider(cfg), nil
+		return NewAPIProvider(pc, cfg.API.Key), nil
 	case "custom":
-		return NewCustomProvider(cfg, execx.DefaultRunner{}), nil
+		return NewCustomProvider(pc, execx.DefaultRunner{}), nil
 	default:
 		return nil, fmt.Errorf("unknown provider: %q (set cx.provider to gemini, copilot, claude, codex, api, or custom)", name)
 	}

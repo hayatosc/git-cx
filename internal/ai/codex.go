@@ -11,12 +11,12 @@ import (
 type CodexProvider struct{ cliProvider }
 
 // NewCodexProvider creates a CodexProvider from config.
-func NewCodexProvider(cfg *config.Config, runner execx.Runner) *CodexProvider {
+func NewCodexProvider(pc config.ProviderConfig, runner execx.Runner) *CodexProvider {
 	return &CodexProvider{cliProvider{
 		cfg:        cliArgs{name: "codex", promptFlag: "exec", modelFlag: "--model"},
-		model:      cfg.Model,
-		candidates: cfg.Candidates,
-		timeout:    cfg.Timeout,
+		model:      pc.Model,
+		candidates: pc.Candidates,
+		timeout:    pc.Timeout,
 		runner:     runner,
 	}}
 }

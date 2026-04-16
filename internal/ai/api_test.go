@@ -52,17 +52,13 @@ func TestAPIProviderGenerate_SendsRequestAndParsesResponse(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := &config.Config{
+	pc := config.ProviderConfig{
 		Model:      "gpt-5",
 		Candidates: 2,
 		Timeout:    2,
-		API: config.APIConfig{
-			BaseURL: server.URL + "/v1/",
-		},
+		APIBaseURL: server.URL + "/v1/",
 	}
-	provider := NewAPIProvider(cfg)
-	provider.apiKey = "test-key"
-	provider.apiKey = "test-key"
+	provider := NewAPIProvider(pc, "test-key")
 
 	got, err := provider.Generate(context.Background(), GenerateRequest{Diff: "diff", Candidates: 2})
 	if err != nil {
@@ -96,16 +92,13 @@ func TestAPIProviderGenerate_ReturnsErrorMessage(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := &config.Config{
+	pc := config.ProviderConfig{
 		Model:      "gpt-5",
 		Candidates: 1,
 		Timeout:    2,
-		API: config.APIConfig{
-			BaseURL: server.URL,
-		},
+		APIBaseURL: server.URL,
 	}
-	provider := NewAPIProvider(cfg)
-	provider.apiKey = "test-key"
+	provider := NewAPIProvider(pc, "test-key")
 
 	_, err := provider.Generate(context.Background(), GenerateRequest{Diff: "diff", Candidates: 1})
 	if err == nil || !strings.Contains(err.Error(), "invalid key") {
@@ -148,15 +141,13 @@ func TestAPIProviderGenerateDetail_SendsRequestAndParsesResponse(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := &config.Config{
+	pc := config.ProviderConfig{
 		Model:      "gpt-5",
 		Candidates: 1,
 		Timeout:    2,
-		API: config.APIConfig{
-			BaseURL: server.URL + "/v1/",
-		},
+		APIBaseURL: server.URL + "/v1/",
 	}
-	provider := NewAPIProvider(cfg)
+	provider := NewAPIProvider(pc, "")
 
 	body, footer, err := provider.GenerateDetail(context.Background(), GenerateRequest{Diff: "diff"})
 	if err != nil {

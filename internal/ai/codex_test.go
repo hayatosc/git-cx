@@ -14,8 +14,8 @@ func TestCodexProviderUsesCLI(t *testing.T) {
 	key := "codex\x00exec\x00" + prompt + "\x00--model\x00gpt-5"
 	runner.Results = map[string]execx.Result{key: {Stdout: "feat: ok"}}
 
-	cfg := &config.Config{Model: "gpt-5", Candidates: 1, Timeout: 1}
-	provider := NewCodexProvider(cfg, runner)
+	pc := config.ProviderConfig{Model: "gpt-5", Candidates: 1, Timeout: 1}
+	provider := NewCodexProvider(pc, runner)
 	got, err := provider.Generate(context.Background(), GenerateRequest{Diff: "diff", Candidates: 1})
 	if err != nil {
 		t.Fatalf("Generate returned error: %v", err)
@@ -31,8 +31,8 @@ func TestCodexProviderGenerateDetailUsesCLI(t *testing.T) {
 	key := "codex\x00exec\x00" + prompt + "\x00--model\x00gpt-5"
 	runner.Results = map[string]execx.Result{key: {Stdout: "Body:\nbody\nFooter:\nfooter"}}
 
-	cfg := &config.Config{Model: "gpt-5", Candidates: 1, Timeout: 1}
-	provider := NewCodexProvider(cfg, runner)
+	pc := config.ProviderConfig{Model: "gpt-5", Candidates: 1, Timeout: 1}
+	provider := NewCodexProvider(pc, runner)
 	body, footer, err := provider.GenerateDetail(context.Background(), GenerateRequest{Diff: "diff"})
 	if err != nil {
 		t.Fatalf("GenerateDetail returned error: %v", err)

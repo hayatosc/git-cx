@@ -7,6 +7,7 @@ func DefaultConfig() *Config {
 		Model:      "gemini-3.0-flash",
 		Candidates: 3,
 		Timeout:    30,
+		ProviderOptions: map[string]ProviderConfig{},
 		API: APIConfig{
 			BaseURL: "https://api.openai.com/v1",
 		},

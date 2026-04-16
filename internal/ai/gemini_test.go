@@ -14,8 +14,8 @@ func TestGeminiProviderUsesCLI(t *testing.T) {
 	key := "gemini\x00-p\x00" + prompt + "\x00-m\x00gemini-model"
 	runner.Results = map[string]execx.Result{key: {Stdout: "feat: ok"}}
 
-	cfg := &config.Config{Model: "gemini-model", Candidates: 1, Timeout: 1}
-	provider := NewGeminiProvider(cfg, runner)
+	pc := config.ProviderConfig{Model: "gemini-model", Candidates: 1, Timeout: 1}
+	provider := NewGeminiProvider(pc, runner)
 	got, err := provider.Generate(context.Background(), GenerateRequest{Diff: "diff", Candidates: 1})
 	if err != nil {
 		t.Fatalf("Generate returned error: %v", err)

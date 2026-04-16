@@ -13,14 +13,15 @@ import (
 
 // Config holds all git-cx configuration.
 type Config struct {
-	Provider   string
-	Model      string
-	Candidates int
-	Timeout    int
-	Command    string // for custom provider: supports {prompt} placeholder
-	API        APIConfig
-	Commit     CommitConfig
-	Providers  []string
+	Provider        string
+	Model           string
+	Candidates      int
+	Timeout         int
+	Command         string // for custom provider: supports {prompt} placeholder
+	API             APIConfig
+	Commit          CommitConfig
+	Providers       []string
+	ProviderOptions map[string]ProviderConfig
 }
 
 // APIConfig holds API provider settings.
@@ -34,6 +35,15 @@ type CommitConfig struct {
 	UseEmoji         bool
 	MaxSubjectLength int
 	Scopes           []string
+}
+
+// ProviderConfig holds optional provider-specific overrides.
+type ProviderConfig struct {
+	Model      string
+	Candidates int
+	Timeout    int
+	Command    string
+	APIBaseURL string
 }
 
 // Load reads config from git config, falling back to defaults.
@@ -59,6 +69,10 @@ func LoadWithFile(ctx context.Context, runner git.Runner, path string) (*Config,
 
 func loadBase(ctx context.Context, runner git.Runner) *Config {
 	cfg := DefaultConfig()
+
+	if cfg.ProviderOptions == nil {
+		cfg.ProviderOptions = map[string]ProviderConfig{}
+	}
 
 	if v := runner.ConfigGet(ctx, "cx.provider"); v != "" {
 		cfg.Provider = v
@@ -104,7 +118,38 @@ func loadBase(ctx context.Context, runner git.Runner) *Config {
 		cfg.Commit.Scopes = scopes
 	}
 
+	loadProviderOverrides(ctx, runner, cfg)
+
 	return cfg
+}
+
+func loadProviderOverrides(ctx context.Context, runner git.Runner, cfg *Config) {
+	names := normalizeProviders(cfg.Providers, cfg.Provider)
+	for _, name := range names {
+		pc := cfg.ProviderOptions[name]
+		if v := runner.ConfigGet(ctx, fmt.Sprintf("cx.providers.%s.model", name)); v != "" {
+			pc.Model = v
+		}
+		if v := runner.ConfigGet(ctx, fmt.Sprintf("cx.providers.%s.candidates", name)); v != "" {
+			if n, err := strconv.Atoi(v); err == nil {
+				pc.Candidates = n
+			}
+		}
+		if v := runner.ConfigGet(ctx, fmt.Sprintf("cx.providers.%s.timeout", name)); v != "" {
+			if n, err := strconv.Atoi(v); err == nil {
+				pc.Timeout = n
+			}
+		}
+		if v := runner.ConfigGet(ctx, fmt.Sprintf("cx.providers.%s.command", name)); v != "" {
+			pc.Command = v
+		}
+		if v := runner.ConfigGet(ctx, fmt.Sprintf("cx.providers.%s.apiBaseUrl", name)); v != "" {
+			pc.APIBaseURL = v
+		}
+		if hasProviderConfig(pc) {
+			cfg.ProviderOptions[name] = pc
+		}
+	}
 }
 
 // Validate checks config values for consistency.
@@ -125,6 +170,10 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("unknown provider: %q (valid providers: gemini, copilot, claude, codex, api, custom; set via 'git config cx.provider PROVIDER')", c.Provider)
 	}
 
+	if c.ProviderOptions == nil {
+		c.ProviderOptions = map[string]ProviderConfig{}
+	}
+
 	c.Providers = normalizeProviders(c.Providers, c.Provider)
 	for _, p := range c.Providers {
 		if _, ok := validProviders[p]; !ok {
@@ -137,24 +186,88 @@ func (c *Config) Validate() error {
 	if c.Timeout <= 0 {
 		return fmt.Errorf("timeout must be greater than 0")
 	}
-	if c.Provider == "custom" && strings.TrimSpace(c.Command) == "" {
-		return fmt.Errorf("cx.command is not set (required for custom provider)")
+	activeProvider := c.ProviderConfig(c.Provider)
+	if c.Provider == "custom" && strings.TrimSpace(activeProvider.Command) == "" {
+		return fmt.Errorf("cx.providers.%s.command is not set (required for custom provider)", c.Provider)
 	}
 	if c.Provider == "api" {
-		if strings.TrimSpace(c.API.BaseURL) == "" {
-			return fmt.Errorf("cx.apiBaseUrl is not set (required for api provider)")
+		if strings.TrimSpace(activeProvider.APIBaseURL) == "" {
+			return fmt.Errorf("cx.providers.%s.apiBaseUrl is not set (required for api provider)", c.Provider)
 		}
-		if err := validateBaseURL(c.API.BaseURL); err != nil {
-			return fmt.Errorf("cx.apiBaseUrl is invalid: %w", err)
+		if err := validateBaseURL(activeProvider.APIBaseURL); err != nil {
+			return fmt.Errorf("cx.providers.%s.apiBaseUrl is invalid: %w", c.Provider, err)
 		}
-		if strings.TrimSpace(c.Model) == "" {
-			return fmt.Errorf("cx.model is not set (required for api provider)")
+		if strings.TrimSpace(activeProvider.Model) == "" {
+			return fmt.Errorf("cx.providers.%s.model is not set (required for api provider)", c.Provider)
 		}
 	}
 	if c.Commit.MaxSubjectLength < 0 {
 		return fmt.Errorf("commit.maxSubjectLength must be >= 0")
 	}
+
+	for _, name := range c.Providers {
+		pc := c.ProviderConfig(name)
+		if pc.Candidates <= 0 {
+			return fmt.Errorf("cx.providers.%s.candidates must be greater than 0", name)
+		}
+		if pc.Timeout <= 0 {
+			return fmt.Errorf("cx.providers.%s.timeout must be greater than 0", name)
+		}
+		switch name {
+		case "custom":
+			if strings.TrimSpace(pc.Command) == "" {
+				return fmt.Errorf("cx.providers.%s.command is not set (required for custom provider)", name)
+			}
+		case "api":
+			if strings.TrimSpace(pc.APIBaseURL) == "" {
+				return fmt.Errorf("cx.providers.%s.apiBaseUrl is not set (required for api provider)", name)
+			}
+			if err := validateBaseURL(pc.APIBaseURL); err != nil {
+				return fmt.Errorf("cx.providers.%s.apiBaseUrl is invalid: %w", name, err)
+			}
+			if strings.TrimSpace(pc.Model) == "" {
+				return fmt.Errorf("cx.providers.%s.model is not set (required for api provider)", name)
+			}
+		}
+	}
 	return nil
+}
+
+// ProviderConfig returns provider-specific config merged with defaults.
+func (c *Config) ProviderConfig(name string) ProviderConfig {
+	base := ProviderConfig{
+		Model:      c.Model,
+		Candidates: c.Candidates,
+		Timeout:    c.Timeout,
+		Command:    c.Command,
+		APIBaseURL: c.API.BaseURL,
+	}
+	if opt, ok := c.ProviderOptions[name]; ok {
+		if opt.Model != "" {
+			base.Model = opt.Model
+		}
+		if opt.Candidates > 0 {
+			base.Candidates = opt.Candidates
+		}
+		if opt.Timeout > 0 {
+			base.Timeout = opt.Timeout
+		}
+		if opt.Command != "" {
+			base.Command = opt.Command
+		}
+		if opt.APIBaseURL != "" {
+			base.APIBaseURL = opt.APIBaseURL
+		}
+	}
+	return base
+}
+
+func hasProviderConfig(pc ProviderConfig) bool {
+	return pc.Model != "" ||
+		pc.Candidates != 0 ||
+		pc.Timeout != 0 ||
+		pc.Command != "" ||
+		pc.APIBaseURL != ""
 }
 
 func normalizeProviders(list []string, primary string) []string {
