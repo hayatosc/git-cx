@@ -17,11 +17,11 @@ type CustomProvider struct {
 }
 
 // NewCustomProvider creates a CustomProvider from config.
-func NewCustomProvider(cfg *config.Config, runner execx.Runner) *CustomProvider {
+func NewCustomProvider(pc config.ProviderConfig, runner execx.Runner) *CustomProvider {
 	return &CustomProvider{
-		command:    cfg.Command,
-		candidates: cfg.Candidates,
-		timeout:    cfg.Timeout,
+		command:    pc.Command,
+		candidates: pc.Candidates,
+		timeout:    pc.Timeout,
 		runner:     runner,
 	}
 }

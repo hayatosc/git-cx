@@ -11,12 +11,12 @@ import (
 type ClaudeProvider struct{ cliProvider }
 
 // NewClaudeProvider creates a ClaudeProvider from config.
-func NewClaudeProvider(cfg *config.Config, runner execx.Runner) *ClaudeProvider {
+func NewClaudeProvider(pc config.ProviderConfig, runner execx.Runner) *ClaudeProvider {
 	return &ClaudeProvider{cliProvider{
 		cfg:        cliArgs{name: "claude", promptFlag: "-p", modelFlag: "--model"},
-		model:      cfg.Model,
-		candidates: cfg.Candidates,
-		timeout:    cfg.Timeout,
+		model:      pc.Model,
+		candidates: pc.Candidates,
+		timeout:    pc.Timeout,
 		runner:     runner,
 	}}
 }

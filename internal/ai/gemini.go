@@ -11,12 +11,12 @@ import (
 type GeminiProvider struct{ cliProvider }
 
 // NewGeminiProvider creates a GeminiProvider from config.
-func NewGeminiProvider(cfg *config.Config, runner execx.Runner) *GeminiProvider {
+func NewGeminiProvider(pc config.ProviderConfig, runner execx.Runner) *GeminiProvider {
 	return &GeminiProvider{cliProvider{
 		cfg:        cliArgs{name: "gemini", promptFlag: "-p", modelFlag: "-m"},
-		model:      cfg.Model,
-		candidates: cfg.Candidates,
-		timeout:    cfg.Timeout,
+		model:      pc.Model,
+		candidates: pc.Candidates,
+		timeout:    pc.Timeout,
 		runner:     runner,
 	}}
 }

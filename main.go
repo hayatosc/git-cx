@@ -36,6 +36,7 @@ func main() {
 
 	root.PersistentFlags().String("config", "", "path to gitconfig-format config file")
 	root.PersistentFlags().String("provider", "", "AI provider (gemini, copilot, claude, codex, api, custom)")
+	root.PersistentFlags().StringSlice("providers", nil, "comma-separated AI providers to enable (first is default unless --provider is set)")
 	root.PersistentFlags().String("model", "", "model name passed to the provider")
 	root.PersistentFlags().Int("candidates", 0, "number of commit message candidates")
 	root.PersistentFlags().Int("timeout", 0, "request timeout in seconds")
@@ -89,6 +90,18 @@ func applyBoolFlag(flags *pflag.FlagSet, name string, dest *bool) error {
 	return nil
 }
 
+func applyStringSliceFlag(flags *pflag.FlagSet, name string, dest *[]string) error {
+	if !flags.Changed(name) {
+		return nil
+	}
+	v, err := flags.GetStringSlice(name)
+	if err != nil {
+		return fmt.Errorf("failed to read %s flag: %w", name, err)
+	}
+	*dest = v
+	return nil
+}
+
 func loadConfig(cmd *cobra.Command, runner git.Runner) (*config.Config, error) {
 	ctx := context.Background()
 	flags := cmd.Flags()
@@ -102,6 +115,7 @@ func loadConfig(cmd *cobra.Command, runner git.Runner) (*config.Config, error) {
 	}
 	for _, fn := range []func() error{
 		func() error { return applyStringFlag(flags, "provider", &cfg.Provider) },
+		func() error { return applyStringSliceFlag(flags, "providers", &cfg.Providers) },
 		func() error { return applyStringFlag(flags, "model", &cfg.Model) },
 		func() error { return applyIntFlag(flags, "candidates", &cfg.Candidates) },
 		func() error { return applyIntFlag(flags, "timeout", &cfg.Timeout) },
@@ -113,6 +127,9 @@ func loadConfig(cmd *cobra.Command, runner git.Runner) (*config.Config, error) {
 		if err := fn(); err != nil {
 			return nil, err
 		}
+	}
+	if flags.Changed("providers") && !flags.Changed("provider") && len(cfg.Providers) > 0 {
+		cfg.Provider = cfg.Providers[0]
 	}
 	return cfg, cfg.Validate()
 }
@@ -126,14 +143,24 @@ func runCommit(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	provider, err := ai.NewProvider(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to initialize AI provider: %w", err)
+	providers := map[string]ai.Provider{}
+	for _, name := range cfg.Providers {
+		if _, exists := providers[name]; exists {
+			continue
+		}
+		p, err := ai.NewProviderWithName(name, cfg)
+		if err != nil {
+			return fmt.Errorf("failed to initialize AI provider %q: %w", name, err)
+		}
+		providers[name] = p
+	}
+	if _, ok := providers[cfg.Provider]; !ok {
+		return fmt.Errorf("provider %q is not configured", cfg.Provider)
 	}
 
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
-	commitService := app.NewCommitService(cfg, provider, gitRunner)
+	commitService := app.NewCommitService(cfg, providers, cfg.Provider, gitRunner)
 	diff, stat, err := commitService.StagedChanges(ctx)
 	if err != nil {
 		if errors.Is(err, git.ErrNoStagedChanges) {

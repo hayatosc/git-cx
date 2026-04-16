@@ -14,8 +14,8 @@ func TestCopilotProviderUsesCLI(t *testing.T) {
 	key := "copilot\x00-p\x00" + prompt + "\x00--model\x00gpt-4o"
 	runner.Results = map[string]execx.Result{key: {Stdout: "feat: ok"}}
 
-	cfg := &config.Config{Model: "gpt-4o", Candidates: 1, Timeout: 1}
-	provider := NewCopilotProvider(cfg, runner)
+	pc := config.ProviderConfig{Model: "gpt-4o", Candidates: 1, Timeout: 1}
+	provider := NewCopilotProvider(pc, runner)
 	got, err := provider.Generate(context.Background(), GenerateRequest{Diff: "diff", Candidates: 1})
 	if err != nil {
 		t.Fatalf("Generate returned error: %v", err)

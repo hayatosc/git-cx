@@ -20,6 +20,7 @@ type State int
 const (
 	stateSelectType State = iota
 	stateInputScope
+	stateSelectProvider
 	stateAILoading
 	stateSelectMsg
 	stateInputMsg
@@ -39,6 +40,14 @@ type item struct {
 func (i item) Title() string       { return i.title }
 func (i item) Description() string { return i.desc }
 func (i item) FilterValue() string { return i.title }
+
+type providerAction int
+
+const (
+	providerActionNone providerAction = iota
+	providerActionMessage
+	providerActionDetail
+)
 
 // aiResultMsg carries the AI generation result.
 type aiResultMsg struct {
@@ -67,19 +76,23 @@ type Model struct {
 	diff    string
 	stat    string
 
-	typeList   list.Model
-	msgList    list.Model
-	detailList list.Model
-	input      textinput.Model
-	body       textarea.Model
-	spin       spinner.Model
+	typeList     list.Model
+	msgList      list.Model
+	detailList   list.Model
+	providerList list.Model
+	input        textinput.Model
+	body         textarea.Model
+	spin         spinner.Model
 
-	commitType string
-	scope      string
-	candidates []string
-	subject    string
-	bodyText   string
-	footer     string
+	commitType     string
+	scope          string
+	candidates     []string
+	subject        string
+	bodyText       string
+	footer         string
+	providerName   string
+	providerTarget providerAction
+	returnState    State
 
 	err      error
 	quitting bool
@@ -114,6 +127,13 @@ func New(service *app.CommitService, diff, stat string, dryRun bool) Model {
 	detailList.SetShowStatusBar(false)
 	detailList.SetFilteringEnabled(false)
 
+	providerItems := buildProviderItems(service.ProviderNames(), service.CurrentProvider())
+	providerList := list.New(providerItems, list.NewDefaultDelegate(), 0, 0)
+	providerList.Title = "Select AI provider"
+	providerList.SetShowStatusBar(false)
+	providerList.SetFilteringEnabled(false)
+	selectProviderInList(&providerList, service.CurrentProvider())
+
 	inp := textinput.New()
 	inp.Placeholder = "(optional) press Enter to skip"
 	inp.Focus()
@@ -128,16 +148,18 @@ func New(service *app.CommitService, diff, stat string, dryRun bool) Model {
 	sp.Style = selectedStyle
 
 	return Model{
-		state:      stateSelectType,
-		service:    service,
-		diff:       diff,
-		stat:       stat,
-		typeList:   typeList,
-		detailList: detailList,
-		input:      inp,
-		body:       ta,
-		spin:       sp,
-		dryRun:     dryRun,
+		state:        stateSelectType,
+		service:      service,
+		diff:         diff,
+		stat:         stat,
+		typeList:     typeList,
+		detailList:   detailList,
+		providerList: providerList,
+		input:        inp,
+		body:         ta,
+		spin:         sp,
+		dryRun:       dryRun,
+		providerName: service.CurrentProvider(),
 	}
 }
 
@@ -157,6 +179,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.typeList.SetSize(msg.Width, msg.Height-4)
 		m.detailList.SetSize(msg.Width, msg.Height-4)
+		m.providerList.SetSize(msg.Width, msg.Height-4)
 		if len(m.msgList.Items()) > 0 {
 			m.msgList.SetSize(msg.Width, msg.Height-4)
 		}
@@ -212,6 +235,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleInputFooterKey(msg)
 	case stateConfirm:
 		return m.handleConfirmKey(msg)
+	case stateSelectProvider:
+		return m.handleSelectProviderKey(msg)
 	}
 
 	return m, nil
@@ -246,6 +271,9 @@ func (m Model) handleInputScopeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleSelectMsgKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.Type == tea.KeyCtrlP {
+		return m.startProviderSelection(providerActionMessage)
+	}
 	if msg.Type == tea.KeyEnter {
 		if i, ok := m.msgList.SelectedItem().(item); ok {
 			switch i.title {
@@ -277,6 +305,9 @@ func (m Model) handleInputMsgKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.state = stateAILoading
 		return m, m.startAIGeneration()
 	}
+	if msg.Type == tea.KeyCtrlP {
+		return m.startProviderSelection(providerActionMessage)
+	}
 	if msg.Type == tea.KeyEnter {
 		m.err = nil
 		m.subject = m.input.Value()
@@ -295,6 +326,9 @@ func (m Model) handleSelectDetailModeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.err = nil
 		m.state = stateDetailAILoading
 		return m, m.startAIDetailGeneration()
+	}
+	if msg.Type == tea.KeyCtrlP {
+		return m.startProviderSelection(providerActionDetail)
 	}
 	if msg.Type == tea.KeyEnter {
 		if i, ok := m.detailList.SelectedItem().(item); ok {
@@ -356,6 +390,43 @@ func (m Model) handleInputFooterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleSelectProviderKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.Type == tea.KeyEsc {
+		m.providerTarget = providerActionNone
+		m.state = m.returnState
+		return m, nil
+	}
+	if msg.Type == tea.KeyEnter {
+		if i, ok := m.providerList.SelectedItem().(item); ok {
+			if err := m.service.UseProvider(i.title); err != nil {
+				m.err = err
+				m.state = m.returnState
+				m.providerTarget = providerActionNone
+				return m, nil
+			}
+			m.providerName = i.title
+			m.err = nil
+			target := m.providerTarget
+			m.providerTarget = providerActionNone
+			switch target {
+			case providerActionMessage:
+				m.state = stateAILoading
+				return m, m.startAIGeneration()
+			case providerActionDetail:
+				m.state = stateDetailAILoading
+				return m, m.startAIDetailGeneration()
+			default:
+				m.state = m.returnState
+				return m, nil
+			}
+		}
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.providerList, cmd = m.providerList.Update(msg)
 	return m, cmd
 }
 
@@ -442,8 +513,48 @@ func (m Model) updateChildren(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.msgList, cmd = m.msgList.Update(msg)
 	case stateSelectDetailMode:
 		m.detailList, cmd = m.detailList.Update(msg)
+	case stateSelectProvider:
+		m.providerList, cmd = m.providerList.Update(msg)
 	}
 	return m, cmd
+}
+
+func (m Model) startProviderSelection(target providerAction) (tea.Model, tea.Cmd) {
+	if len(m.service.ProviderNames()) <= 1 {
+		return m, nil
+	}
+	items := buildProviderItems(m.service.ProviderNames(), m.providerName)
+	m.providerList.SetItems(items)
+	selectProviderInList(&m.providerList, m.providerName)
+	m.providerList.SetSize(m.width, m.height-4)
+	m.providerTarget = target
+	m.returnState = m.state
+	m.state = stateSelectProvider
+	return m, nil
+}
+
+func buildProviderItems(names []string, current string) []list.Item {
+	items := make([]list.Item, 0, len(names))
+	for _, name := range names {
+		desc := ""
+		if name == current {
+			desc = "current"
+		}
+		items = append(items, item{title: name, desc: desc})
+	}
+	return items
+}
+
+func selectProviderInList(l *list.Model, current string) {
+	for idx, it := range l.Items() {
+		if i, ok := it.(item); ok && i.title == current {
+			l.Select(idx)
+			return
+		}
+	}
+	if len(l.Items()) > 0 {
+		l.Select(0)
+	}
 }
 
 func (m Model) startAIGeneration() tea.Cmd {
@@ -539,10 +650,13 @@ func (m Model) View() string {
 		return m.viewInputMsg()
 	case stateSelectDetailMode:
 		return m.viewSelectDetailMode()
+	case stateSelectProvider:
+		return m.viewSelectProvider()
 	case stateDetailAILoading:
 		return fmt.Sprintf(
-			"\n  %s Generating commit details...\n\n%s",
+			"\n  %s Generating commit details with %s...\n\n%s",
 			m.spin.View(),
+			m.providerName,
 			helpStyle.Render("Ctrl+C to quit"),
 		)
 	case stateInputBody:
@@ -558,6 +672,11 @@ func (m Model) View() string {
 	return ""
 }
 
+func (m Model) viewSelectProvider() string {
+	view := m.providerList.View()
+	return view + "\n" + helpStyle.Render("Enter to select • Esc to cancel")
+}
+
 func (m Model) viewInputScope() string {
 	return fmt.Sprintf(
 		"%s\n\n%s\n\n%s",
@@ -569,8 +688,9 @@ func (m Model) viewInputScope() string {
 
 func (m Model) viewAILoading() string {
 	return fmt.Sprintf(
-		"\n  %s Generating commit messages...\n\n%s",
+		"\n  %s Generating commit messages with %s...\n\n%s",
 		m.spin.View(),
+		m.providerName,
 		helpStyle.Render("Ctrl+C to quit"),
 	)
 }
@@ -580,7 +700,8 @@ func (m Model) viewSelectMsg() string {
 	if m.err != nil {
 		view = errorStyle.Render(fmt.Sprintf("AI error: %v\n\n", m.err)) + view
 	}
-	return view + "\n" + helpStyle.Render("Enter to select • Ctrl+C to quit")
+	providerInfo := helpStyle.Render(fmt.Sprintf("Provider: %s", m.providerName))
+	return view + "\n" + providerInfo + "\n" + helpStyle.Render("Enter to select • Ctrl+P to switch provider • Ctrl+C to quit")
 }
 
 func (m Model) viewInputMsg() string {
@@ -588,12 +709,14 @@ func (m Model) viewInputMsg() string {
 	if m.err != nil {
 		errMsg = errorStyle.Render(fmt.Sprintf("AI error: %v\n\n", m.err))
 	}
+	providerInfo := helpStyle.Render(fmt.Sprintf("Provider: %s", m.providerName))
 	return fmt.Sprintf(
-		"%s%s\n\n%s\n\n%s",
+		"%s%s\n\n%s\n\n%s\n\n%s",
 		errMsg,
 		titleStyle.Render("Enter commit message"),
 		m.input.View(),
-		helpStyle.Render("Enter to confirm • Ctrl+R to retry AI • Ctrl+C to quit"),
+		providerInfo,
+		helpStyle.Render("Enter to confirm • Ctrl+R to retry AI • Ctrl+P to switch provider • Ctrl+C to quit"),
 	)
 }
 
@@ -602,7 +725,8 @@ func (m Model) viewSelectDetailMode() string {
 	if m.err != nil {
 		view = errorStyle.Render(fmt.Sprintf("AI error: %v\n\n", m.err)) + view
 	}
-	return view + "\n" + helpStyle.Render("Ctrl+R to retry AI • Ctrl+C to quit")
+	providerInfo := helpStyle.Render(fmt.Sprintf("Provider: %s", m.providerName))
+	return view + "\n" + providerInfo + "\n" + helpStyle.Render("Ctrl+R to retry AI • Ctrl+P to switch provider • Ctrl+C to quit")
 }
 
 func (m Model) viewInputBody() string {

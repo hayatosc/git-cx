@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/hayatosc/git-cx/internal/ai"
@@ -13,14 +14,65 @@ import (
 
 // CommitService coordinates commit flow.
 type CommitService struct {
-	cfg      *config.Config
-	provider ai.Provider
-	git      git.Runner
+	cfg           *config.Config
+	provider      ai.Provider
+	providerName  string
+	providers     map[string]ai.Provider
+	providerOrder []string
+	git           git.Runner
 }
 
 // NewCommitService builds a service with dependencies.
-func NewCommitService(cfg *config.Config, provider ai.Provider, gitRunner git.Runner) *CommitService {
-	return &CommitService{cfg: cfg, provider: provider, git: gitRunner}
+func NewCommitService(cfg *config.Config, providers map[string]ai.Provider, currentProvider string, gitRunner git.Runner) *CommitService {
+	order := make([]string, 0, len(cfg.Providers))
+	for _, name := range cfg.Providers {
+		if _, ok := providers[name]; ok {
+			order = append(order, name)
+		}
+	}
+	if len(order) == 0 && currentProvider != "" {
+		order = append(order, currentProvider)
+	}
+	if currentProvider == "" && len(order) > 0 {
+		currentProvider = order[0]
+	}
+	provider := providers[currentProvider]
+	return &CommitService{
+		cfg:           cfg,
+		provider:      provider,
+		providerName:  currentProvider,
+		providers:     providers,
+		providerOrder: order,
+		git:           gitRunner,
+	}
+}
+
+// ProviderNames returns configured provider names in preference order.
+func (s *CommitService) ProviderNames() []string {
+	out := make([]string, 0, len(s.providerOrder))
+	out = append(out, s.providerOrder...)
+	if len(out) == 0 {
+		for name := range s.providers {
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
+// CurrentProvider returns the active provider name.
+func (s *CommitService) CurrentProvider() string {
+	return s.providerName
+}
+
+// UseProvider switches the active provider.
+func (s *CommitService) UseProvider(name string) error {
+	p, ok := s.providers[name]
+	if !ok {
+		return fmt.Errorf("unknown provider: %s", name)
+	}
+	s.provider = p
+	s.providerName = name
+	return nil
 }
 
 // StagedChanges returns staged diff and stat.
@@ -45,6 +97,9 @@ func (s *CommitService) GenerateCandidates(ctx context.Context, diff, stat, comm
 		Scope:      scope,
 		Candidates: s.cfg.Candidates,
 	}
+	if s.provider == nil {
+		return nil, fmt.Errorf("provider %q is not configured", s.providerName)
+	}
 	return s.provider.Generate(ctx, req)
 }
 
@@ -57,6 +112,9 @@ func (s *CommitService) GenerateDetails(ctx context.Context, diff, stat, commitT
 		Scope:      scope,
 		Subject:    subject,
 		Candidates: 1,
+	}
+	if s.provider == nil {
+		return "", "", fmt.Errorf("provider %q is not configured", s.providerName)
 	}
 	return s.provider.GenerateDetail(ctx, req)
 }

@@ -24,13 +24,13 @@ type APIProvider struct {
 }
 
 // NewAPIProvider creates an APIProvider from config.
-func NewAPIProvider(cfg *config.Config) *APIProvider {
+func NewAPIProvider(pc config.ProviderConfig, apiKey string) *APIProvider {
 	return &APIProvider{
-		baseURL:    cfg.API.BaseURL,
-		apiKey:     cfg.API.Key,
-		model:      cfg.Model,
-		candidates: cfg.Candidates,
-		timeout:    cfg.Timeout,
+		baseURL:    pc.APIBaseURL,
+		apiKey:     apiKey,
+		model:      pc.Model,
+		candidates: pc.Candidates,
+		timeout:    pc.Timeout,
 	}
 }
 

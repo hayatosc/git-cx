@@ -11,12 +11,12 @@ import (
 type CopilotProvider struct{ cliProvider }
 
 // NewCopilotProvider creates a CopilotProvider from config.
-func NewCopilotProvider(cfg *config.Config, runner execx.Runner) *CopilotProvider {
+func NewCopilotProvider(pc config.ProviderConfig, runner execx.Runner) *CopilotProvider {
 	return &CopilotProvider{cliProvider{
 		cfg:        cliArgs{name: "copilot", promptFlag: "-p", modelFlag: "--model"},
-		model:      cfg.Model,
-		candidates: cfg.Candidates,
-		timeout:    cfg.Timeout,
+		model:      pc.Model,
+		candidates: pc.Candidates,
+		timeout:    pc.Timeout,
 		runner:     runner,
 	}}
 }
